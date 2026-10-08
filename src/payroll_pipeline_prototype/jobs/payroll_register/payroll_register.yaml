@@ -19,7 +19,7 @@ job:
     - contract: payroll_register_raw
       # job: <job name>   # instead of contract, to read another job's output; create that job first
       alias: payroll_register_raw
-      allow_empty: false  # true lets this source read no rows without failing the run
+      allow_empty: true  # true lets this source read no rows without failing the run
   sink:
     contract: payroll_register   # the output contract: contracts/payroll_register_data_contract.yaml
     write_mode: overwrite     # the only mode: replaces the partitions present in the output
