@@ -43,16 +43,24 @@ def generate_retro_pay_data(payroll_register_raw: DataFrame) -> DataFrame:
 
 
 def filter_regular_pay_data(payroll_register_raw: DataFrame) -> DataFrame:
-    """Filter payroll register data to include only regular pay runs.
+    """Filter payroll register data to regular runs and deduplicate key fields.
+
+    Retains only rows where run_type equals 'regular', then removes duplicate
+    records based on the combination of employee_id, pay_run_id, and
+    lohnart_code, keeping the first occurrence of each unique combination.
 
     Args:
-        payroll_register_raw: Raw payroll register DataFrame containing all run types.
+        payroll_register_raw: Raw payroll register DataFrame containing all
+            pay run types and potentially duplicate records.
 
     Returns:
-        DataFrame containing only rows where run_type equals 'regular', with the
-        same schema as the input.
+        A DataFrame with the same schema as the input, filtered to regular
+        run_type rows and deduplicated on employee_id, pay_run_id, and
+        lohnart_code.
     """
-    return payroll_register_raw.filter(F.col("run_type") == "regular")
+    return payroll_register_raw.filter(F.col("run_type") == "regular").dropDuplicates(
+        ["employee_id", "pay_run_id", "lohnart_code"]
+    )
 
 
 def join_retro_pay_data(

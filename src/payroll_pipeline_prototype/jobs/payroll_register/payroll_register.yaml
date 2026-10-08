@@ -40,7 +40,7 @@ job:
           - name: amount_eur_retro
             type: decimal(14,2)
     - name: filter regular pay data
-      description: filter raw payroll data to only include rows where run_type = 'regular'.
+      description: filter raw payroll data to only include rows where run_type = 'regular', and deduplicate the DataFrame over employee_id, pay_run_id, and lohnart_code.
       inputs: [payroll_register_raw]
       output:
         grain_change: false
