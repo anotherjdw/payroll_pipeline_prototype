@@ -52,7 +52,32 @@ module "catalog" {
   # ---------------------------------------------------------------------------
   # BEGIN Hive tables (managed by engineering-automation -- do not edit by hand)
   # >>> AMEND:TABLES
-  tables = {}
+  tables = {
+    "preprocessed/payroll_register" = {
+      layer       = "preprocessed"
+      dataset     = "payroll_register"
+      description = "deduplicated payroll data with retroactive pay reassigned to its original pay date."
+      partition_keys = [
+        { name = "pay_date", type = "date", comment = "Date payment was issued." },
+      ]
+      columns = [
+        { name = "pay_run_id", type = "string", nullable = false, comment = "Identifier for the payroll run that produced this line." },
+        { name = "pay_period", type = "string", nullable = false, comment = "Pay period this line applies to (e.g. year-month)." },
+        { name = "run_type", type = "string", nullable = false, comment = "Type of payroll run (e.g. regular, off-cycle, correction, retro)." },
+        { name = "employee_id", type = "string", nullable = false, comment = "Foreign key to employee_master.employee_id." },
+        { name = "cost_center_code", type = "string", nullable = false, comment = "Cost center as booked for this specific pay period — not the employee's current cost center. Foreign key to cost_center_reference.cost_center_code." },
+        { name = "location_code", type = "string", nullable = false, comment = "Foreign key to location_reference.location_code — location as of this pay period." },
+        { name = "lohnart_code", type = "string", nullable = false, comment = "Foreign key to pay_component_reference.lohnart_code — wage type code." },
+        { name = "component_name", type = "string", nullable = false, comment = "Human-readable pay component name." },
+        { name = "bearer", type = "string", nullable = false, comment = "Whether this component is borne by employer or employee." },
+        { name = "gl_account", type = "string", nullable = false, comment = "General ledger account this line posts to." },
+        { name = "quantity", type = "decimal(12,4)", nullable = true, comment = "Quantity basis for the component (e.g. hours), where applicable. Null for flat-amount components." },
+        { name = "rate", type = "decimal(12,6)", nullable = true, comment = "Rate applied to quantity to derive amount_eur, where applicable. Null for flat-amount components." },
+        { name = "assessment_base_eur", type = "decimal(14,2)", nullable = true, comment = "Base amount this component's contribution/tax was calculated against. Null where not applicable to the component type." },
+        { name = "amount_eur", type = "decimal(14,2)", nullable = false, comment = "Regular-run amount plus any retro-pay correction booked to the same employee/pay_period/lohnart_code." },
+      ]
+    }
+  }
   # <<< AMEND:TABLES
   # END Hive tables
   # ---------------------------------------------------------------------------
@@ -70,7 +95,22 @@ module "glue" {
   # ---------------------------------------------------------------------------
   # BEGIN ETL jobs and triggers (managed by engineering-automation -- do not edit by hand)
   # >>> AMEND:JOBS
-  jobs = {}
+  jobs = {
+    payroll_register = {
+      glue = {
+        number_of_workers = 5
+        worker_type       = "G.1X"
+      }
+      arguments = {
+        END_DATE                        = "2026-06-30"
+        OUTPUT_PATH                     = "s3://${module.s3.bucket_names["preprocessed"]}/payroll_register/"
+        OUTPUT_TABLE                    = "${module.catalog.table_names["preprocessed/payroll_register"]}"
+        PAYROLL_REGISTER_RAW_INPUT_PATH = "s3://${module.s3.bucket_names["raw"]}/payroll/"
+        PROCESSING_TYPE                 = "backfill"
+        START_DATE                      = "2026-05-01"
+      }
+    }
+  }
 
   scheduled_triggers = {}
 

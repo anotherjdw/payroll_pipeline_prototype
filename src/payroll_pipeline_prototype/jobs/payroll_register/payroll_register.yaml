@@ -1,0 +1,59 @@
+# Job spec for the payroll_register ETL job. Generation-time input; never deployed.
+# Fill in every value shaped like <...>. Unknown fields and leftover <...> values fail validation.
+# To delete this job, delete src/<package>/jobs/payroll_register/ and its tests:
+# tests/unit/payroll_register/, tests/integration/test_payroll_register_integration.py,
+# tests/end_to_end/test_payroll_register_e2e.py and tests/fixtures/payroll_register/.
+job:
+  name: payroll_register
+  description: Deduplicates and assigns retroactive pay for
+  glue:
+    worker_type: G.1X
+    number_of_workers: 5
+  processing:
+    type: backfill        # lookback | backfill
+    # lookback_days: 1      # lookback only: complete days ending yesterday; 0 processes the current date only
+    start_date: 2026-05-01   # YYYY-MM-DD; set both dates when type is backfill, neither for lookback
+    end_date: 2026-06-30     # backfill processes every day from start_date to end_date
+    # schedule: cron(0 6 * * ? *)   # optional; AWS cron, UTC; only for a job with no upstream job
+  sources:
+    - contract: payroll_register_raw
+      # job: <job name>   # instead of contract, to read another job's output; create that job first
+      alias: payroll_register_raw
+      allow_empty: false  # true lets this source read no rows without failing the run
+  sink:
+    contract: payroll_register   # the output contract: contracts/payroll_register_data_contract.yaml
+    write_mode: overwrite     # the only mode: replaces the partitions present in the output
+    partition_key: pay_date
+  transformations:
+    - name: generate retro pay data
+      description: filter the data set where run_type = 'retro', group the data on employee_id, pay_period and lohnart_code and sum up the amount_eur column under the name amount_eur_retro.
+      inputs: [payroll_register_raw]
+      output:
+        grain_change: true
+        columns:
+          - name: employee_id
+            type: string
+          - name: pay_period
+            type: string
+          - name: lohnart_code
+            type: string
+          - name: amount_eur_retro
+            type: decimal(14,2)
+    - name: filter regular pay data
+      description: filter raw payroll data to only include rows where run_type = 'regular'.
+      inputs: [payroll_register_raw]
+      output:
+        grain_change: false
+    - name: join retro pay data
+      description: Left join the output dataframe from generate_retro_pay_data to the filter_regular_payroll_data data on employee_id, pay_period and lohnart_code. Fill in null values of amount_retro_eur with zero.
+      inputs: [filter_regular_pay_data, generate_retro_pay_data]
+      depends_on: [filter_regular_pay_data, generate_retro_pay_data]
+      output:
+        grain_change: false
+    - name: combine pay columns
+      description: add the amount_eur and amount_eur_retro columns together, and drop amount_retro_eur from the dataset.
+      inputs: [join_retro_pay_data]
+      depends_on: [join_retro_pay_data]
+      output:
+        grain_change: false
+        removes_columns: [amount_eur_retro]

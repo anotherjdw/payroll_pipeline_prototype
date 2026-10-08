@@ -1,30 +1,35 @@
 .PHONY: install test test-unit test-integration test-e2e lint format typecheck check fmt plan package clean
 
+# Glue 5.0 runs Python 3.11; every target uses the tools in .venv, built from it.
+PYTHON := python3.11
+BIN := .venv/bin
+
 install:
-	pip install -e ".[dev]"
-	@if git rev-parse --git-dir >/dev/null 2>&1; then pre-commit install; \
-	else echo "Not a git repository yet: run 'git init', then 'pre-commit install'."; fi
+	$(PYTHON) -m venv .venv
+	$(BIN)/pip3 install -e ".[dev]"
+	@if git rev-parse --git-dir >/dev/null 2>&1; then $(BIN)/pre-commit install; \
+	else echo "Not a git repository yet: run 'git init', then '$(BIN)/pre-commit install'."; fi
 
 test:
-	pytest
+	$(BIN)/pytest
 
 test-unit:
-	pytest tests/unit
+	$(BIN)/pytest tests/unit
 
 test-integration:
-	pytest tests/integration
+	$(BIN)/pytest tests/integration
 
 test-e2e:
-	pytest tests/end_to_end
+	$(BIN)/pytest tests/end_to_end
 
 lint:
-	ruff check src/ tests/
+	$(BIN)/ruff check src/ tests/
 
 format:
-	ruff format src/ tests/
+	$(BIN)/ruff format src/ tests/
 
 typecheck:
-	mypy src/
+	$(BIN)/mypy src/
 
 check: lint typecheck test
 

@@ -1,0 +1,71 @@
+# Output contract of the payroll_register ETL job: the dataset it writes. Generation-time input;
+# never deployed. Fill in every value shaped like <...>.
+contract:
+  layer: preprocessed
+  dataset: payroll_register
+  description: deduplicated payroll data with retroactive pay reassigned to its original pay date.
+  table: hive               # a Hive table over this dataset; needs sink.partition_key and
+                            # snake_case dataset and column names
+  grain:
+    unique_key: [employee_id, pay_run_id, lohnart_code]    # checked for duplicates on every write
+  schema:
+    - name: pay_run_id
+      type: string
+      nullable: false
+      description: "Identifier for the payroll run that produced this line."
+    - name: pay_period
+      type: string
+      nullable: false
+      description: "Pay period this line applies to (e.g. year-month)."
+    - name: pay_date
+      type: date
+      nullable: false
+      description: "Date payment was issued."
+    - name: run_type
+      type: string
+      nullable: false
+      description: "Type of payroll run (e.g. regular, off-cycle, correction, retro)."
+    - name: employee_id
+      type: string
+      nullable: false
+      description: "Foreign key to employee_master.employee_id."
+    - name: cost_center_code
+      type: string
+      nullable: false
+      description: "Cost center as booked for this specific pay period — not the employee's current cost center. Foreign key to cost_center_reference.cost_center_code."
+    - name: location_code
+      type: string
+      nullable: false
+      description: "Foreign key to location_reference.location_code — location as of this pay period."
+    - name: lohnart_code
+      type: string
+      nullable: false
+      description: "Foreign key to pay_component_reference.lohnart_code — wage type code."
+    - name: component_name
+      type: string
+      nullable: false
+      description: "Human-readable pay component name."
+    - name: bearer
+      type: string
+      nullable: false
+      description: "Whether this component is borne by employer or employee."
+    - name: gl_account
+      type: string
+      nullable: false
+      description: "General ledger account this line posts to."
+    - name: quantity
+      type: decimal(12,4)
+      nullable: true
+      description: "Quantity basis for the component (e.g. hours), where applicable. Null for flat-amount components."
+    - name: rate
+      type: decimal(12,6)
+      nullable: true
+      description: "Rate applied to quantity to derive amount_eur, where applicable. Null for flat-amount components."
+    - name: assessment_base_eur
+      type: decimal(14,2)
+      nullable: true
+      description: "Base amount this component's contribution/tax was calculated against. Null where not applicable to the component type."
+    - name: amount_eur
+      type: decimal(14,2)
+      nullable: false
+      description: "Regular-run amount plus any retro-pay correction booked to the same employee/pay_period/lohnart_code."
