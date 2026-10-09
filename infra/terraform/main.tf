@@ -53,6 +53,28 @@ module "catalog" {
   # BEGIN Hive tables (managed by engineering-automation -- do not edit by hand)
   # >>> AMEND:TABLES
   tables = {
+    "preprocessed/cost_center_reference" = {
+      layer       = "preprocessed"
+      dataset     = "cost_center_reference"
+      description = "Snapshot record containing the attributes of the company's cost centers."
+      partition_keys = [
+        { name = "snapshot_date", type = "date", comment = "The date in which the snapshot of the cost center reference is generated." },
+      ]
+      columns = [
+        { name = "cost_center_code", type = "string", nullable = false, comment = "Natural key for the cost center." },
+        { name = "cost_center_name", type = "string", nullable = false, comment = "Human-readable cost center name." },
+        { name = "department_name", type = "string", nullable = false, comment = "Department this cost center rolls up to." },
+        { name = "cost_center_type", type = "string", nullable = false, comment = "Classification of the cost center (e.g. operational, administrative)." },
+        { name = "default_location_code", type = "string", nullable = false, comment = "Foreign key to location_reference.location_code - default site associated with this cost center." },
+        { name = "accident_insurance_rate_pct", type = "decimal(5,2)", nullable = false, comment = "Risk classification used to determine the accident insurance rate." },
+        { name = "accident_risk_class", type = "string", nullable = false, comment = "Statutory accident insurance (Berufsgenossenschaft) contribution rate for this cost center's risk class." },
+        { name = "gl_cost_center_segment", type = "string", nullable = false, comment = "General ledger account segment used to post costs for this cost center." },
+        { name = "planned_headcount_fte", type = "int", nullable = false, comment = "Budgeted/planned FTE headcount for this cost center." },
+        { name = "is_active", type = "boolean", nullable = false, comment = "Whether the cost center is currently active." },
+        { name = "valid_from", type = "date", nullable = false, comment = "Start of this record's validity period." },
+        { name = "valid_to", type = "date", nullable = false, comment = "End of this record's validity period. Null indicates the record is currently active." },
+      ]
+    }
     "preprocessed/location_reference" = {
       layer       = "preprocessed"
       dataset     = "location_reference"
@@ -124,6 +146,20 @@ module "glue" {
   # BEGIN ETL jobs and triggers (managed by engineering-automation -- do not edit by hand)
   # >>> AMEND:JOBS
   jobs = {
+    cost_center_reference = {
+      glue = {
+        number_of_workers = 2
+        worker_type       = "G.1X"
+      }
+      arguments = {
+        COST_CENTER_REFERENCE_RAW_INPUT_PATH = "s3://${module.s3.bucket_names["raw"]}/cost_center_reference/"
+        END_DATE                             = "2026-06-01"
+        OUTPUT_PATH                          = "s3://${module.s3.bucket_names["preprocessed"]}/cost_center_reference/"
+        OUTPUT_TABLE                         = "${module.catalog.table_names["preprocessed/cost_center_reference"]}"
+        PROCESSING_TYPE                      = "backfill"
+        START_DATE                           = "2026-06-01"
+      }
+    }
     location_reference = {
       glue = {
         number_of_workers = 2

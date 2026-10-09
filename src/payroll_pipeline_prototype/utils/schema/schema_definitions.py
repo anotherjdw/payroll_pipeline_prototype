@@ -8,9 +8,46 @@ from pyspark.sql.types import (
     BooleanType,
     DateType,
     DecimalType,
+    IntegerType,
     StringType,
     StructField,
     StructType,
+)
+
+cost_center_reference_schema = StructType(
+    [
+        StructField("snapshot_date", DateType(), nullable=False),
+        StructField("cost_center_code", StringType(), nullable=False),
+        StructField("cost_center_name", StringType(), nullable=False),
+        StructField("department_name", StringType(), nullable=False),
+        StructField("cost_center_type", StringType(), nullable=False),
+        StructField("default_location_code", StringType(), nullable=False),
+        StructField("accident_insurance_rate_pct", DecimalType(5, 2), nullable=False),
+        StructField("accident_risk_class", StringType(), nullable=False),
+        StructField("gl_cost_center_segment", StringType(), nullable=False),
+        StructField("planned_headcount_fte", IntegerType(), nullable=False),
+        StructField("is_active", BooleanType(), nullable=False),
+        StructField("valid_from", DateType(), nullable=False),
+        StructField("valid_to", DateType(), nullable=False),
+    ]
+)
+
+cost_center_reference_raw_schema = StructType(
+    [
+        StructField("snapshot_date", DateType(), nullable=False),
+        StructField("cost_center_code", StringType(), nullable=False),
+        StructField("cost_center_name", StringType(), nullable=False),
+        StructField("department_name", StringType(), nullable=False),
+        StructField("cost_center_type", StringType(), nullable=False),
+        StructField("default_location_code", StringType(), nullable=False),
+        StructField("accident_insurance_rate_pct", DecimalType(5, 2), nullable=False),
+        StructField("accident_risk_class", StringType(), nullable=False),
+        StructField("gl_cost_center_segment", StringType(), nullable=False),
+        StructField("planned_headcount_fte", IntegerType(), nullable=False),
+        StructField("is_active", BooleanType(), nullable=False),
+        StructField("valid_from", DateType(), nullable=False),
+        StructField("valid_to", DateType(), nullable=False),
+    ]
 )
 
 location_reference_schema = StructType(

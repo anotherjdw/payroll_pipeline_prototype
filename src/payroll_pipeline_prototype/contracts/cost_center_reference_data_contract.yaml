@@ -1,0 +1,63 @@
+# Output contract of the cost_center_reference ETL job: the dataset it writes. Generation-time input;
+# never deployed. Fill in every value shaped like <...>.
+contract:
+  layer: preprocessed
+  dataset: cost_center_reference
+  description: Snapshot record containing the attributes of the company's cost centers.
+  table: hive               # a Hive table over this dataset; needs sink.partition_key and
+                            # snake_case dataset and column names
+  grain:
+    unique_key: [cost_center_code, valid_from]    # checked for duplicates on every write
+  schema:
+    - name: snapshot_date
+      type: date
+      nullable: false
+      description: "The date in which the snapshot of the cost center reference is generated."
+    - name: cost_center_code
+      type: string
+      nullable: false
+      description: "Natural key for the cost center."
+    - name: cost_center_name
+      type: string
+      nullable: false
+      description: "Human-readable cost center name."
+    - name: department_name
+      type: string
+      nullable: false
+      description: "Department this cost center rolls up to."
+    - name: cost_center_type
+      type: string
+      nullable: false
+      description: "Classification of the cost center (e.g. operational, administrative)."
+    - name: default_location_code
+      type: string
+      nullable: false
+      description: "Foreign key to location_reference.location_code - default site associated with this cost center."
+    - name: accident_insurance_rate_pct
+      type: decimal(5,2)
+      nullable: false
+      description: "Risk classification used to determine the accident insurance rate."
+    - name: accident_risk_class
+      type: string
+      nullable: false
+      description: "Statutory accident insurance (Berufsgenossenschaft) contribution rate for this cost center's risk class."
+    - name: gl_cost_center_segment
+      type: string
+      nullable: false
+      description: "General ledger account segment used to post costs for this cost center."
+    - name: planned_headcount_fte
+      type: int
+      nullable: false
+      description: "Budgeted/planned FTE headcount for this cost center."
+    - name: is_active
+      type: boolean
+      nullable: false
+      description: "Whether the cost center is currently active."
+    - name: valid_from
+      type: date
+      nullable: false
+      description: "Start of this record's validity period."
+    - name: valid_to
+      type: date
+      nullable: false
+      description: "End of this record's validity period. Null indicates the record is currently active."
