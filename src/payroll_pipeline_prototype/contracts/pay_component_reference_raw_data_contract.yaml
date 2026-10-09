@@ -1,0 +1,93 @@
+# Source contract pay_component_reference_raw: data no job in this project writes. Written by
+# `scaffold create-source-contracts` for pay_component_reference. Describe the files exactly as they are on
+# disk. Generation-time input; never deployed.
+contract:
+  layer: raw                  # raw | preprocessed | processed
+  dataset: pay_component_reference
+  file_format: json
+  partition_key: valid_from
+  schema:
+    - name: reference_version
+      type: string
+      nullable: false
+      description: "Version identifier for this reference data snapshot."
+    - name: valid_from
+      type: date
+      nullable: false
+      description: "Start of this record's validity period."
+    - name: valid_to
+      type: date
+      nullable: false
+      description: "End of this record's validity period. Null indicates the record is currently active."
+    - name: lohnart_code
+      type: string
+      nullable: false
+      description: "Natural key — wage type code."
+    - name: name_de
+      type: string
+      nullable: false
+      description: "Component name in German"
+    - name: name_en
+      type: string
+      nullable: false
+      description: "Component name in English"
+    - name: category
+      type: string
+      nullable: false
+      description: "Component category (e.g. earnings, statutory deduction, tax)."
+    - name: bearer
+      type: string
+      nullable: false
+      description: "Whether this component is borne by employer, employee, or both."
+    - name: gl_account
+      type: string
+      nullable: false
+      description: "General ledger account this component posts to."
+    - name: applies_to
+      type: string
+      nullable: false
+      description: "Population this component applies to (e.g. all employees, GKV only)."
+    - name: is_active
+      type: boolean
+      nullable: false
+      description: "Whether this pay component is currently active/in use."
+    - name: employee_rate_pct
+      type: decimal(5,2)
+      nullable: true
+      description: "Employee-borne contribution rate, where the employee bears any portion of this component."
+    - name: employer_rate_pct
+      type: decimal(5,2)
+      nullable: true
+      description: "Employer-borne contribution rate, where the employee bears any portion of this component."
+    - name: ceiling_basis
+      type: string
+      nullable: true
+      description: "Basis the contribution ceiling is calculated against, where a ceiling applies. Null for components with no ceiling."
+    - name: ceiling_monthly_eur
+      type: decimal(10,2)
+      nullable: true
+      description: "Monthly contribution ceiling in EUR, where applicable. Null for components with no ceiling."
+    - name: employer_amount_cap_eur
+      type: decimal(10,2)
+      nullable: true
+      description: "Cap on the employer-borne amount, where applicable."
+    - name: rate_on_lohnsteuer_pct
+      type: decimal(5,2)
+      nullable: true
+      description: "Rate applied on top of income tax, where the component is calculated this way (e.g. church tax, solidarity surcharge). Null otherwise."
+    - name: pv_childless_surcharge_pct
+      type: decimal(5,2)
+      nullable: true
+      description: "Long-term care insurance childless surcharge rate, where relevant. Null for non-PV components."
+    - name: pv_child_reduction_pct
+      type: decimal(5,2)
+      nullable: true
+      description: "Long-term care insurance rate reduction applicable per child, where relevant. Null for non-PV components."
+    - name: employer_rate_asymmetric
+      type: boolean
+      nullable: false
+      description: "Whether the employer rate diverges from a simple half-split of the employee rate (true for long-term care insurance)."
+    - name: rate_note
+      type: string
+      nullable: true
+      description: "Free-text note on rate calculation nuances."

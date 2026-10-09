@@ -1,0 +1,95 @@
+# Output contract of the pay_component_reference ETL job: the dataset it writes. Generation-time input;
+# never deployed. Fill in every value shaped like <...>.
+contract:
+  layer: preprocessed
+  dataset: pay_component_reference
+  description: The preprocessed pay_component_reference data source is the wage-type catalog from the raw (ingested) data and deduplicated to one row per wage type per validity window, keeping its GL account, bearer, rate and ceiling rules.
+  # table: hive               # a Hive table over this dataset; needs sink.partition_key and
+  #                           # snake_case dataset and column names
+  grain:
+    unique_key: [lohnart_code, valid_from]    # checked for duplicates on every write
+  schema:
+    - name: reference_version
+      type: string
+      nullable: false
+      description: "Version identifier for this reference data snapshot."
+    - name: valid_from
+      type: date
+      nullable: false
+      description: "Start of this record's validity period."
+    - name: valid_to
+      type: date
+      nullable: false
+      description: "End of this record's validity period. Null indicates the record is currently active."
+    - name: lohnart_code
+      type: string
+      nullable: false
+      description: "Natural key — wage type code."
+    - name: name_de
+      type: string
+      nullable: false
+      description: "Component name in German"
+    - name: name_en
+      type: string
+      nullable: false
+      description: "Component name in English"
+    - name: category
+      type: string
+      nullable: false
+      description: "Component category (e.g. earnings, statutory deduction, tax)."
+    - name: bearer
+      type: string
+      nullable: false
+      description: "Whether this component is borne by employer, employee, or both."
+    - name: gl_account
+      type: string
+      nullable: false
+      description: "General ledger account this component posts to."
+    - name: applies_to
+      type: string
+      nullable: false
+      description: "Population this component applies to (e.g. all employees, GKV only)."
+    - name: is_active
+      type: boolean
+      nullable: false
+      description: "Whether this pay component is currently active/in use."
+    - name: employee_rate_pct
+      type: decimal(5,2)
+      nullable: true
+      description: "Employee-borne contribution rate, where the employee bears any portion of this component."
+    - name: employer_rate_pct
+      type: decimal(5,2)
+      nullable: true
+      description: "Employer-borne contribution rate, where the employee bears any portion of this component."
+    - name: ceiling_basis
+      type: string
+      nullable: true
+      description: "Basis the contribution ceiling is calculated against, where a ceiling applies. Null for components with no ceiling."
+    - name: ceiling_monthly_eur
+      type: decimal(10,2)
+      nullable: true
+      description: "Monthly contribution ceiling in EUR, where applicable. Null for components with no ceiling."
+    - name: employer_amount_cap_eur
+      type: decimal(10,2)
+      nullable: true
+      description: "Cap on the employer-borne amount, where applicable."
+    - name: rate_on_lohnsteuer_pct
+      type: decimal(5,2)
+      nullable: true
+      description: "Rate applied on top of income tax, where the component is calculated this way (e.g. church tax, solidarity surcharge). Null otherwise."
+    - name: pv_childless_surcharge_pct
+      type: decimal(5,2)
+      nullable: true
+      description: "Long-term care insurance childless surcharge rate, where relevant. Null for non-PV components."
+    - name: pv_child_reduction_pct
+      type: decimal(5,2)
+      nullable: true
+      description: "Long-term care insurance rate reduction applicable per child, where relevant. Null for non-PV components."
+    - name: employer_rate_asymmetric
+      type: boolean
+      nullable: false
+      description: "Whether the employer rate diverges from a simple half-split of the employee rate (true for long-term care insurance)."
+    - name: rate_note
+      type: string
+      nullable: true
+      description: "Free-text note on rate calculation nuances."

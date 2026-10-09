@@ -1,0 +1,40 @@
+# Job spec for the location_reference ETL job. Generation-time input; never deployed.
+# Fill in every value shaped like <...>. Unknown fields and leftover <...> values fail validation.
+# To delete this job, delete src/<package>/jobs/location_reference/ and its tests:
+# tests/unit/location_reference/, tests/integration/test_location_reference_integration.py,
+# tests/end_to_end/test_location_reference_e2e.py and tests/fixtures/location_reference/.
+job:
+  name: location_reference
+  description: Snapshot record containing the attributes of the company's operational sites.
+  glue:
+    worker_type: G.1X
+    number_of_workers: 2
+  processing:
+    type: backfill        # lookback | backfill
+    # lookback_days: 1      # lookback only: complete days ending yesterday; 0 processes the current date only
+    start_date: 2026-06-01   # YYYY-MM-DD; set both dates when type is backfill, neither for lookback
+    end_date: 2026-06-01     # backfill processes every day from start_date to end_date
+    # schedule: cron(0 6 * * ? *)   # optional; AWS cron, UTC; only for a job with no upstream job
+  sources:
+    - contract: location_reference_raw
+      # job: <job name>   # instead of contract, to read another job's output; create that job first
+      alias: location_reference_raw
+      allow_empty: true  # true lets this source read no rows without failing the run
+  sink:
+    contract: location_reference   # the output contract: contracts/location_reference_data_contract.yaml
+    write_mode: overwrite     # the only mode: replaces the partitions present in the output
+    partition_key: snapshot_date
+  transformations:
+    - name: deduplicate location reference
+      description: >
+        Deduplicate the DataFrame over the unique keys location_code and valid_from.
+      # inputs: the DataFrames this transformation takes, in order; each becomes a parameter.
+      # An input is a source alias, or the name of another transformation to take its output.
+      # Names are written as `name:` is: lower case, spaces and hyphens become underscores.
+      inputs: [location_reference_raw]
+      # depends_on: [<transformation name>]   # list every transformation named in inputs
+      # output: the result has its inputs' columns, minus removes_columns, plus columns; the
+      # description is not read for this. To rename a column, list its old name under
+      # removes_columns and its new name, with its type, under columns.
+      output:
+        grain_change: false

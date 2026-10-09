@@ -53,6 +53,34 @@ module "catalog" {
   # BEGIN Hive tables (managed by engineering-automation -- do not edit by hand)
   # >>> AMEND:TABLES
   tables = {
+    "preprocessed/location_reference" = {
+      layer       = "preprocessed"
+      dataset     = "location_reference"
+      description = "Snapshot record containing the attributes of the company's operational sites."
+      partition_keys = [
+        { name = "snapshot_date", type = "date", comment = "The date in which the snapshot of the location reference is generated." },
+      ]
+      columns = [
+        { name = "location_code", type = "string", nullable = false, comment = "Natural key for the location" },
+        { name = "location_name", type = "string", nullable = false, comment = "Location site name" },
+        { name = "site_type", type = "string", nullable = false, comment = "Type of site (e.g. HQ, fulfillment center)." },
+        { name = "street_address", type = "string", nullable = false, comment = "Site street address" },
+        { name = "postal_code", type = "string", nullable = false, comment = "Site postal code" },
+        { name = "city", type = "string", nullable = false, comment = "Site city." },
+        { name = "bundesland", type = "string", nullable = false, comment = "German federal state (e.g. Berlin, Sachsen)." },
+        { name = "bundesland_code", type = "string", nullable = false, comment = "Two-letter code for the federal state." },
+        { name = "country", type = "string", nullable = false, comment = "Site country." },
+        { name = "country_code", type = "string", nullable = false, comment = "ISO country code." },
+        { name = "timezone", type = "string", nullable = false, comment = "Site timezone." },
+        { name = "opened_date", type = "date", nullable = false, comment = "Date the site began operations." },
+        { name = "church_tax_rate_pct", type = "decimal(5,2)", nullable = false, comment = "Church tax rate applicable in this state (varies by Bundesland, typically 8-9%)." },
+        { name = "pv_regional_variant", type = "string", nullable = false, comment = "Regional long-term care insurance (PV) contribution split variant — Saxony differs from the rest of Germany." },
+        { name = "rv_av_ceiling_region_pre_2025", type = "string", nullable = false, comment = "Pre-2025 East/West German contribution ceiling region flag, retained for historical reference following ceiling unification." },
+        { name = "is_active", type = "boolean", nullable = false, comment = "Whether the site is currently active/operational." },
+        { name = "valid_from", type = "date", nullable = false, comment = "Start of this record's validity period." },
+        { name = "valid_to", type = "date", nullable = false, comment = "End of this record's validity period. Null indicates the record is currently active." },
+      ]
+    }
     "preprocessed/payroll_register" = {
       layer       = "preprocessed"
       dataset     = "payroll_register"
@@ -96,6 +124,33 @@ module "glue" {
   # BEGIN ETL jobs and triggers (managed by engineering-automation -- do not edit by hand)
   # >>> AMEND:JOBS
   jobs = {
+    location_reference = {
+      glue = {
+        number_of_workers = 2
+        worker_type       = "G.1X"
+      }
+      arguments = {
+        END_DATE                          = "2026-06-01"
+        LOCATION_REFERENCE_RAW_INPUT_PATH = "s3://${module.s3.bucket_names["raw"]}/location_reference/"
+        OUTPUT_PATH                       = "s3://${module.s3.bucket_names["preprocessed"]}/location_reference/"
+        OUTPUT_TABLE                      = "${module.catalog.table_names["preprocessed/location_reference"]}"
+        PROCESSING_TYPE                   = "backfill"
+        START_DATE                        = "2026-06-01"
+      }
+    }
+    pay_component_reference = {
+      glue = {
+        number_of_workers = 5
+        worker_type       = "G.1X"
+      }
+      arguments = {
+        END_DATE                               = "2026-01-01"
+        OUTPUT_PATH                            = "s3://${module.s3.bucket_names["preprocessed"]}/pay_component_reference/"
+        PAY_COMPONENT_REFERENCE_RAW_INPUT_PATH = "s3://${module.s3.bucket_names["raw"]}/pay_component_reference/"
+        PROCESSING_TYPE                        = "backfill"
+        START_DATE                             = "2024-01-01"
+      }
+    }
     payroll_register = {
       glue = {
         number_of_workers = 5
