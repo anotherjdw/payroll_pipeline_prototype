@@ -75,6 +75,56 @@ module "catalog" {
         { name = "valid_to", type = "date", nullable = false, comment = "End of this record's validity period. Null indicates the record is currently active." },
       ]
     }
+    "preprocessed/employee_master" = {
+      layer       = "preprocessed"
+      dataset     = "employee_master"
+      description = "Primary source of the payroll information for company employees."
+      partition_keys = [
+        { name = "snapshot_date", type = "date", comment = "Date this record reflects (used for SCD2 history construction downstream)." },
+      ]
+      columns = [
+        { name = "employee_id", type = "string", nullable = false, comment = "Natural key for the employee." },
+        { name = "first_name", type = "string", nullable = false, comment = "Employee first name." },
+        { name = "last_name", type = "string", nullable = false, comment = "Employee last name." },
+        { name = "gender", type = "string", nullable = false, comment = "Employee gender." },
+        { name = "date_of_birth", type = "date", nullable = false, comment = "Employee date of birth." },
+        { name = "nationality", type = "string", nullable = true, comment = "Employee nationality." },
+        { name = "marital_status", type = "string", nullable = true, comment = "Marital status, relevant for Steuerklasse assignment." },
+        { name = "steuer_id", type = "string", nullable = false, comment = "German statutory tax ID — unique per person for life." },
+        { name = "sozialversicherungsnummer", type = "string", nullable = false, comment = "German social insurance number." },
+        { name = "iban", type = "string", nullable = false, comment = "Employee bank account IBAN for payroll disbursement." },
+        { name = "street_address", type = "string", nullable = false, comment = "Employee street address." },
+        { name = "postal_code", type = "string", nullable = true, comment = "Employee postal code." },
+        { name = "city", type = "string", nullable = false, comment = "Employee's city of residence." },
+        { name = "work_location_code", type = "string", nullable = false, comment = "Foreign key to location_reference.location_code — employee's work site." },
+        { name = "work_location_name", type = "string", nullable = false, comment = "Denormalized work site name." },
+        { name = "department", type = "string", nullable = false, comment = "Department name." },
+        { name = "cost_center_code", type = "string", nullable = false, comment = "Foreign key to cost_center_reference.cost_center_code — employee's current cost center." },
+        { name = "role", type = "string", nullable = false, comment = "Job title/role." },
+        { name = "pay_type", type = "string", nullable = false, comment = "Salaried vs. hourly pay basis — determines whether annual_gross_eur or hourly_rate_eur is populated." },
+        { name = "employment_type", type = "string", nullable = false, comment = "Employment type (e.g. full-time, part-time, minijob)." },
+        { name = "contracted_hours_per_month", type = "decimal(6,2)", nullable = false, comment = "Contracted working hours per month." },
+        { name = "annual_gross_eur", type = "decimal(10,2)", nullable = true, comment = "Annual gross salary for salaried employees. Null for hourly-paid employees (see hourly_rate_eur)." },
+        { name = "hourly_rate_eur", type = "decimal(5,2)", nullable = true, comment = "Hourly rate for hourly-paid employees. Null for salaried employees (see annual_gross_eur)." },
+        { name = "steuerklasse", type = "string", nullable = true, comment = "German income tax bracket (Steuerklasse I–VI)." },
+        { name = "num_children", type = "int", nullable = false, comment = "Number of children, relevant for PV childless surcharge and Steuerklasse." },
+        { name = "childless_surcharge_applies", type = "boolean", nullable = false, comment = "Whether the childless surcharge on long-term care insurance (PV) applies to this employee." },
+        { name = "religious_affiliation", type = "string", nullable = true, comment = "Religious affiliation, relevant to church tax liability. Null where not applicable/disclosed." },
+        { name = "church_tax_applies", type = "boolean", nullable = false, comment = "Whether church tax is withheld for this employee." },
+        { name = "health_insurance_type", type = "string", nullable = false, comment = "Statutory (GKV) or private (PKV) health insurance." },
+        { name = "health_insurance_fund", type = "string", nullable = true, comment = "Name of the statutory health insurance fund (Krankenkasse). Expected only for GKV members; null for PKV." },
+        { name = "manager_id", type = "string", nullable = true, comment = "Foreign key to employee_master.employee_id — employee's manager. Null for top-of-org-chart roles." },
+        { name = "hire_date", type = "date", nullable = false, comment = "Employee hire date." },
+        { name = "termination_date", type = "date", nullable = true, comment = "Employment termination date. Null for currently active employees." },
+        { name = "job_level", type = "string", nullable = true, comment = "Job/seniority level." },
+        { name = "extract_timestamp", type = "timestamp", nullable = false, comment = "Employment termination date. Null for currently active employees." },
+        { name = "is_version_start", type = "boolean", nullable = false, comment = "Indicates whether the data point contains a change in the employee's master record." },
+        { name = "valid_from", type = "date", nullable = false, comment = "Snapshot date on which this version of the employee's record was first observed. The underlying change may have taken effect earlier, between the previous snapshot and this one." },
+        { name = "valid_to", type = "date", nullable = true, comment = "Snapshot date on which the next version was first observed. Null for the current version." },
+        { name = "employee_version_id", type = "string", nullable = false, comment = "Hashed ID of the concatenation of the employee_id and valid_from fields." },
+        { name = "is_current", type = "boolean", nullable = false, comment = "Boolean flag indicating whether the employee record is active as of the snapshot_date." },
+      ]
+    }
     "preprocessed/location_reference" = {
       layer       = "preprocessed"
       dataset     = "location_reference"
@@ -158,6 +208,20 @@ module "glue" {
         OUTPUT_TABLE                         = "${module.catalog.table_names["preprocessed/cost_center_reference"]}"
         PROCESSING_TYPE                      = "backfill"
         START_DATE                           = "2026-06-01"
+      }
+    }
+    employee_master = {
+      glue = {
+        number_of_workers = 5
+        worker_type       = "G.1X"
+      }
+      arguments = {
+        EMPLOYEE_MASTER_RAW_INPUT_PATH = "s3://${module.s3.bucket_names["raw"]}/employee_master/"
+        END_DATE                       = "2026-06-30"
+        OUTPUT_PATH                    = "s3://${module.s3.bucket_names["preprocessed"]}/employee_master/"
+        OUTPUT_TABLE                   = "${module.catalog.table_names["preprocessed/employee_master"]}"
+        PROCESSING_TYPE                = "backfill"
+        START_DATE                     = "2026-06-30"
       }
     }
     location_reference = {

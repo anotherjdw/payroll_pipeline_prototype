@@ -1,0 +1,153 @@
+# Source contract employee_master_raw: data no job in this project writes. Written by
+# `scaffold create-source-contracts` for employee_master. Describe the files exactly as they are on
+# disk. Generation-time input; never deployed.
+contract:
+  layer: raw                  # raw | preprocessed | processed
+  dataset: employee_master
+  file_format: json
+  partition_key: snapshot_date
+  schema:
+    - name: snapshot_date
+      type: date
+      nullable: false
+      description: "Date this record reflects (used for SCD2 history construction downstream)."
+    - name: employee_id
+      type: string
+      nullable: false
+      description: "Natural key for the employee."
+    - name: first_name
+      type: string
+      nullable: false
+      description: "Employee first name."
+    - name: last_name
+      type: string
+      nullable: false
+      description: "Employee last name."
+    - name: gender
+      type: string
+      nullable: false
+      description: "Employee gender."
+    - name: date_of_birth
+      type: date
+      nullable: false
+      description: "Employee date of birth."
+    - name: nationality
+      type: string
+      nullable: true
+      description: "Employee nationality."
+    - name: marital_status
+      type: string
+      nullable: true
+      description: "Marital status, relevant for Steuerklasse assignment."
+    - name: steuer_id
+      type: string
+      nullable: false
+      description: "German statutory tax ID — unique per person for life."
+    - name: sozialversicherungsnummer
+      type: string
+      nullable: false
+      description: "German social insurance number."
+    - name: iban
+      type: string
+      nullable: false
+      description: "Employee bank account IBAN for payroll disbursement."
+    - name: street_address
+      type: string
+      nullable: false
+      description: "Employee street address."
+    - name: postal_code
+      type: string
+      nullable: true
+      description: "Employee postal code."
+    - name: city
+      type: string
+      nullable: false
+      description: "Employee's city of residence."
+    - name: work_location_code
+      type: string
+      nullable: false
+      description: "Foreign key to location_reference.location_code — employee's work site."
+    - name: work_location_name
+      type: string
+      nullable: false
+      description: "Denormalized work site name."
+    - name: department
+      type: string
+      nullable: false
+      description: "Department name."
+    - name: cost_center_code
+      type: string
+      nullable: false
+      description: "Foreign key to cost_center_reference.cost_center_code — employee's current cost center."
+    - name: role
+      type: string
+      nullable: false
+      description: "Job title/role."
+    - name: pay_type
+      type: string
+      nullable: false
+      description: "Salaried vs. hourly pay basis — determines whether annual_gross_eur or hourly_rate_eur is populated."
+    - name: employment_type
+      type: string
+      nullable: false
+      description: "Employment type (e.g. full-time, part-time, minijob)."
+    - name: contracted_hours_per_month
+      type: decimal(6,2)
+      nullable: false
+      description: "Contracted working hours per month."
+    - name: annual_gross_eur
+      type: decimal(10,2)
+      nullable: true
+      description: "Annual gross salary for salaried employees. Null for hourly-paid employees (see hourly_rate_eur)."
+    - name: hourly_rate_eur
+      type: decimal(5,2)
+      nullable: true
+      description: "Hourly rate for hourly-paid employees. Null for salaried employees (see annual_gross_eur)."
+    - name: steuerklasse
+      type: string
+      nullable: true
+      description: "German income tax bracket (Steuerklasse I–VI)."
+    - name: num_children
+      type: int
+      nullable: false
+      description: "Number of children, relevant for PV childless surcharge and Steuerklasse."
+    - name: childless_surcharge_applies
+      type: boolean
+      nullable: false
+      description: "Whether the childless surcharge on long-term care insurance (PV) applies to this employee."
+    - name: religious_affiliation
+      type: string
+      nullable: true
+      description: "Religious affiliation, relevant to church tax liability. Null where not applicable/disclosed."
+    - name: church_tax_applies
+      type: boolean
+      nullable: false
+      description: "Whether church tax is withheld for this employee."
+    - name: health_insurance_type
+      type: string
+      nullable: false
+      description: "Statutory (GKV) or private (PKV) health insurance."
+    - name: health_insurance_fund
+      type: string
+      nullable: true
+      description: "Name of the statutory health insurance fund (Krankenkasse). Expected only for GKV members; null for PKV."
+    - name: manager_id
+      type: string
+      nullable: true
+      description: "Foreign key to employee_master.employee_id — employee's manager. Null for top-of-org-chart roles."
+    - name: hire_date
+      type: date
+      nullable: false
+      description: "Employee hire date."
+    - name: termination_date
+      type: date
+      nullable: true
+      description: "Employment termination date. Null for currently active employees."
+    - name: job_level
+      type: string
+      nullable: true
+      description: "Job/seniority level."
+    - name: extract_timestamp
+      type: timestamp
+      nullable: false
+      description: "Employment termination date. Null for currently active employees."

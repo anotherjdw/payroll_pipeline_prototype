@@ -1,0 +1,91 @@
+# Job spec for the employee_master ETL job. Generation-time input; never deployed.
+# Fill in every value shaped like <...>. Unknown fields and leftover <...> values fail validation.
+# To delete this job, delete src/<package>/jobs/employee_master/ and its tests:
+# tests/unit/employee_master/, tests/integration/test_employee_master_integration.py,
+# tests/end_to_end/test_employee_master_e2e.py and tests/fixtures/employee_master/.
+job:
+  name: employee_master
+  description: Primary source of the payroll information for company employees.
+  glue:
+    worker_type: G.1X
+    number_of_workers: 5
+  processing:
+    type: backfill        # lookback | backfill
+    # lookback_days: 1      # lookback only: complete days ending yesterday; 0 processes the current date only
+    start_date: 2026-06-30   # YYYY-MM-DD; set both dates when type is backfill, neither for lookback
+    end_date: 2026-06-30     # backfill processes every day from start_date to end_date
+    # schedule: cron(0 6 * * ? *)   # optional; AWS cron, UTC; only for a job with no upstream job
+  sources:
+    - contract: employee_master_raw
+      # job: <job name>   # instead of contract, to read another job's output; create that job first
+      alias: employee_master_raw
+      allow_empty: false  # true lets this source read no rows without failing the run
+  sink:
+    contract: employee_master   # the output contract: contracts/employee_master_data_contract.yaml
+    write_mode: overwrite     # the only mode: replaces the partitions present in the output
+    partition_key: snapshot_date
+  transformations:
+    - name: deduplicate employee master
+      description: >
+        Deduplicate the DataFrame over the unique keys employee_id and snapshot_date, ordered by extract_timestamp descending.
+      # inputs: the DataFrames this transformation takes, in order; each becomes a parameter.
+      # An input is a source alias, or the name of another transformation to take its output.
+      # Names are written as `name:` is: lower case, spaces and hyphens become underscores.
+      inputs: [employee_master_raw]
+      # depends_on: [<transformation name>]   # list every transformation named in inputs
+      # output: the result has its inputs' columns, minus removes_columns, plus columns; the
+      # description is not read for this. To rename a column, list its old name under
+      # removes_columns and its new name, with its type, under columns.
+      output:
+        grain_change: false
+    - name: create tracked columns
+      description: >
+        is_version_start = not F.struct(tracked).eqNullSafe(its F.lag over a window by employee_id ordered by snapshot_date), so null to value is a change and each employee's first row is true. tracked: cost_center_code, department, work_location_code, role, job_level, employment_type, pay_type, contracted_hours_per_month, annual_gross_eur, hourly_rate_eur, steuerklasse, church_tax_applies, num_children, childless_surcharge_applies, health_insurance_type, health_insurance_fund, termination_date.
+      inputs: [deduplicate_employee_master]
+      depends_on: [deduplicate_employee_master]
+      output:
+        grain_change: false
+        columns:
+          - name: is_version_start
+            type: boolean
+            nullable: false
+    - name: filter version starts
+      description: filter the DataFrame to keep rows `is_version_start` is true, then drop the `is_version_start` column.
+      inputs: [create_tracked_columns]
+      depends_on: [create_tracked_columns]
+      output:
+        grain_change: false
+        removes_columns: [is_version_start]
+    - name: add_validity_window
+      description: Create a valid_from column, where valid_from = snapshot_date. Create a valid_to column, where valid_to = F.lead('snapshot_date') over a window partitioned by employee_id and ordered by snapshot_date.
+      inputs: [filter_version_starts]
+      depends_on: [filter_version_starts]
+      output:
+        grain_change: false
+        columns:
+          - name: valid_from
+            type: date
+            nullable: false
+          - name: valid_to
+            type: date
+            nullable: true
+    - name: create employee version id
+      description: create an md5 hashed column called employee_version_id, which takes a concatenation employee_id and valid_from.
+      inputs: [add_validity_window]
+      depends_on: [add_validity_window]
+      output:
+        grain_change: false
+        columns:
+          - name: employee_version_id
+            type: string
+            nullable: false
+    - name: add is_current flag
+      description: creates an is_current column, which yields true if the valid_to field is null or if the valid_to date is later than the snapshot_date.
+      inputs: [create_employee_version_id]
+      depends_on: [create_employee_version_id]
+      output:
+        grain_change: false
+        columns:
+          - name: is_current
+            type: boolean
+            nullable: false
