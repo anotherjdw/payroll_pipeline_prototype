@@ -55,7 +55,7 @@ contract:
       description: "Employee bank account IBAN for payroll disbursement."
     - name: street_address
       type: string
-      nullable: false
+      nullable: true
       description: "Employee street address."
     - name: postal_code
       type: string

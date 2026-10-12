@@ -93,7 +93,7 @@ module "catalog" {
         { name = "steuer_id", type = "string", nullable = false, comment = "German statutory tax ID — unique per person for life." },
         { name = "sozialversicherungsnummer", type = "string", nullable = false, comment = "German social insurance number." },
         { name = "iban", type = "string", nullable = false, comment = "Employee bank account IBAN for payroll disbursement." },
-        { name = "street_address", type = "string", nullable = false, comment = "Employee street address." },
+        { name = "street_address", type = "string", nullable = true, comment = "Employee street address." },
         { name = "postal_code", type = "string", nullable = true, comment = "Employee postal code." },
         { name = "city", type = "string", nullable = false, comment = "Employee's city of residence." },
         { name = "work_location_code", type = "string", nullable = false, comment = "Foreign key to location_reference.location_code — employee's work site." },
