@@ -19,7 +19,7 @@ job:
     - contract: location_reference_raw
       # job: <job name>   # instead of contract, to read another job's output; create that job first
       alias: location_reference_raw
-      allow_empty: true  # true lets this source read no rows without failing the run
+      allow_empty: false  # true lets this source read no rows without failing the run
   sink:
     contract: location_reference   # the output contract: contracts/location_reference_data_contract.yaml
     write_mode: overwrite     # the only mode: replaces the partitions present in the output
