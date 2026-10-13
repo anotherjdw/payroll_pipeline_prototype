@@ -1,0 +1,60 @@
+# Job spec for the dim_pay_run ETL job. Generation-time input; never deployed.
+# Fill in every value shaped like <...>. Unknown fields and leftover <...> values fail validation.
+# To delete this job, delete src/<package>/jobs/dim_pay_run/ and its tests:
+# tests/unit/dim_pay_run/, tests/integration/test_dim_pay_run_integration.py,
+# tests/end_to_end/test_dim_pay_run_e2e.py and tests/fixtures/dim_pay_run/.
+job:
+  name: dim_pay_run
+  description: Dimensions containing attributes related to individual payroll runs.
+  glue:
+    worker_type: G.1X
+    number_of_workers: 2
+  processing:
+    type: backfill        # lookback | backfill
+    # lookback_days: 1      # lookback only: complete days ending yesterday; 0 processes the current date only
+    start_date: 2024-07-31   # YYYY-MM-DD; set both dates when type is backfill, neither for lookback
+    end_date: 2026-06-30     # backfill processes every day from start_date to end_date
+    # schedule: cron(0 6 * * ? *)   # optional; AWS cron, UTC; only for a job with no upstream job
+  sources:
+    # contract: <contract name, e.g. raw_orders for contracts/raw_orders_data_contract.yaml>
+    - job: payroll_register   # instead of contract, to read another job's output; create that job first
+      alias: payroll_register
+      allow_empty: false  # true lets this source read no rows without failing the run
+  sink:
+    contract: dim_pay_run   # the output contract: contracts/dim_pay_run_data_contract.yaml
+    write_mode: overwrite     # the only mode: replaces the partitions present in the output
+    partition_key: pay_date
+  transformations:
+    - name: select pay run columns
+      description: >
+        Take the payroll_register DataFrame and select the pay_run_id, pay_date, and run_type columns.
+      # inputs: the DataFrames this transformation takes, in order; each becomes a parameter.
+      # An input is a source alias, or the name of another transformation to take its output.
+      # Names are written as `name:` is: lower case, spaces and hyphens become underscores.
+      inputs: [payroll_register]
+      # depends_on: every transformation named in inputs. transform() calls each of them before
+      # this one, so their output exists when this one is called. Leave out source aliases:
+      # read() loads every source before any transformation is called.
+      # depends_on: [<transformation name>]
+      # output: the result has its inputs' columns, minus removes_columns, plus columns; the
+      # description is not read for this. To rename a column, list its old name under
+      # removes_columns and its new name, with its type, under columns.
+      output:
+        grain_change: false
+        removes_columns: [pay_period, employee_id, cost_center_code, location_code, lohnart_code, component_name, bearer, gl_account, quantity, rate, assessment_base_eur, amount_eur]
+        # removes_columns: [<column this transformation drops>]
+    - name: deduplicate pay run data
+      description: Deduplicate the data so that there is only one row per pay_run_id.
+      inputs: [select_pay_run_columns]
+      depends_on: [select_pay_run_columns]
+      output:
+        grain_change: false
+    - name: create pay run key
+      description: create an md5 hashed column called pay_run_key, which hashes the pay_run_id column.
+      inputs: [deduplicate pay run data]
+      depends_on: [deduplicate pay run data]
+      output:
+        grain_change: false
+        columns:
+          - name: pay_run_key
+            type: string

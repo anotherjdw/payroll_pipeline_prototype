@@ -1,0 +1,28 @@
+# Output contract of the dim_pay_run ETL job: the dataset it writes. Generation-time input;
+# never deployed. Fill in every value shaped like <...>.
+contract:
+  layer: processed
+  dataset: dim_pay_run
+  description: Dimensions containing attributes related to individual payroll runs.
+  table: hive               # a Hive table over this dataset; needs sink.partition_key and
+                            # snake_case dataset and column names
+  grain:
+    unique_key: [pay_run_id]    # checked for duplicates on every write
+  schema:
+    - name: pay_run_id
+      type: string
+      nullable: false
+      description: "Identifier for the payroll run that produced this line."
+    - name: pay_date
+      type: date
+      nullable: false
+      description: "Date payment was issued."
+    - name: run_type
+      type: string
+      nullable: false
+      description: "Type of payroll run (e.g. regular, off-cycle, correction, retro)."
+    - name: pay_run_key
+      type: string
+      nullable: false
+      description: "Hashed primary key of the pay_run_id column."
+# Optional, not used yet: owner, version, contact, classification, freshness.

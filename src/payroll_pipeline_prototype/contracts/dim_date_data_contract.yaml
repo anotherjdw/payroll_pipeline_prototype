@@ -1,0 +1,52 @@
+# Output contract of the dim_date ETL job: the dataset it writes. Generation-time input;
+# never deployed. Fill in every value shaped like <...>.
+contract:
+  layer: preprocessed
+  dataset: dates
+  description: Reference data source that contains key dimensions based on calendar date.
+  # table: hive               # a Hive table over this dataset; needs sink.partition_key and
+  #                           # snake_case dataset and column names
+  grain:
+    unique_key: [date]    # checked for duplicates on every write
+  schema:
+    - name: date
+      type: date
+      nullable: false         # false: the write fails if this column holds a null
+      description: "Calendar date in YYYY-MM-DD format."
+    - name: year
+      type: int
+      nullable: false
+      description: "Year of the calendar date."
+    - name: quarter
+      type: int
+      nullable: false
+      description: "Quarter of the calendar date as an integer."
+    - name: month_name
+      type: string
+      nullable: false
+      description: "The name of the month corresponding to the calendar date."
+    - name: pay_period
+      type: string
+      nullable: false
+      description: "The month-year period of the calendar date in yyyy-MM format."
+    - name: month_begin
+      type: date
+      nullable: false
+      description: "The date of the first day of the month, corresponding to the calendar date."
+    - name: month_end
+      type: date
+      nullable: false
+      description: "The date of the last day of the month, corresponding to the calendar date."
+    - name: month_end_flag
+      type: boolean
+      nullable: false
+      description: "Boolean flag that indicates whether the calendar date is the last day of the month."
+    - name: peak_flag
+      type: boolean
+      nullable: false
+      description: "Boolean flag that indicates peak sales times."
+    - name: date_key
+      type: int
+      nullable: false
+      description: "Primary key in yyyymmdd integer format."
+# Optional, not used yet: owner, version, contact, classification, freshness.

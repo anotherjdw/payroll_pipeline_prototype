@@ -1,0 +1,103 @@
+# Job spec for the dim_date ETL job. Generation-time input; never deployed.
+# Fill in every value shaped like <...>. Unknown fields and leftover <...> values fail validation.
+# To delete this job, delete src/<package>/jobs/dim_date/ and its tests:
+# tests/unit/dim_date/, tests/integration/test_dim_date_integration.py,
+# tests/end_to_end/test_dim_date_e2e.py and tests/fixtures/dim_date/.
+job:
+  name: dim_date
+  description: Creates date related dimensions for use in fact tables.
+  glue:
+    worker_type: G.1X
+    number_of_workers: 2
+  processing:
+    type: backfill        # lookback | backfill
+    # lookback_days: 1      # lookback only: complete days ending yesterday; 0 processes the current date only
+    start_date: 2000-01-01   # YYYY-MM-DD; set both dates when type is backfill, neither for lookback
+    end_date: 2050-12-31     # backfill processes every day from start_date to end_date
+    # schedule: cron(0 6 * * ? *)   # optional; AWS cron, UTC; only for a job with no upstream job
+  sources:
+    - contract: dates
+      # job: <job name>   # instead of contract, to read another job's output; create that job first
+      alias: dates
+      allow_empty: false  # true lets this source read no rows without failing the run
+  sink:
+    contract: dim_date   # the output contract: contracts/dim_date_data_contract.yaml
+    write_mode: overwrite     # the only mode: replaces the partitions present in the output
+  transformations:
+    - name: create year column
+      description: >
+        Create a year column by using the date column and extracting the year.
+      # inputs: the DataFrames this transformation takes, in order; each becomes a parameter.
+      # An input is a source alias, or the name of another transformation to take its output.
+      # Names are written as `name:` is: lower case, spaces and hyphens become underscores.
+      inputs: [dates]
+      # depends_on: every transformation named in inputs. transform() calls each of them before
+      # this one, so their output exists when this one is called. Leave out source aliases:
+      # read() loads every source before any transformation is called.
+      # depends_on: [<transformation name>]
+      # output: the result has its inputs' columns, minus removes_columns, plus columns; the
+      # description is not read for this. To rename a column, list its old name under
+      # removes_columns and its new name, with its type, under columns.
+      output:
+        grain_change: false
+        columns:            # columns this transformation adds; delete the block if none
+          - name: year
+            type: int
+    - name: create quarter column
+      description: Create a quarter column, using the F.quarter(F.col("date")) to extract the quarter from the date column.
+      inputs: [create_year_column]
+      depends_on: [create_year_column]
+      output:
+        grain_change: false
+        columns:
+          - name: quarter
+            type: int
+    - name: create month name column
+      description: Create a month_name column, using F.date_format() to extract the full name of the month from the date column.
+      inputs: [create_quarter_column]
+      depends_on: [create_quarter_column]
+      output:
+        grain_change: false
+        columns:
+          - name: month_name
+            type: string
+    - name: create pay period dimension
+      description: Create a pay_period column, using F.date_format() to extract the yyyy-MM numeric year-month from the date column.
+      inputs: [create_month_name_column]
+      depends_on: [create_month_name_column]
+      output:
+        grain_change: false
+        columns:
+          - name: pay_period
+            type: string
+    - name: add month boundaries
+      description: Create a month_begin and month_end column, which extracts the date field to create columns that show the first date and last month, respectively, of the given month in YYYY-MM-DD format. For example, for 2026-02-17, the month_begin would be 2026-01-01 and month_end would be 2026-02-28. Additionally, create a boolean flag named month_end_flag that displays true when month_end = date.
+      inputs: [create_pay_period_dimension]
+      depends_on: [create_pay_period_dimension]
+      output:
+        grain_change: false
+        columns:
+          - name: month_begin
+            type: date
+          - name: month_end
+            type: date
+          - name: month_end_flag
+            type: boolean
+    - name: add peak flag
+      description: Create a boolean flag to mark the peak following peak season dates as true - Valentine's Day, Mother's Day (in Germany, every second Sunday in May), and the period between the last Friday in November until Christmas Eve. Otherwise the boolean is false.
+      inputs: [add_month_boundaries]
+      depends_on: [add_month_boundaries]
+      output:
+        grain_change: false
+        columns:
+          - name: peak_flag
+            type: boolean
+    - name: add date key
+      description: Converts each date into an integer in yyyymmdd format to use as the table's primary key.
+      inputs: [add_peak_flag]
+      depends_on: [add_peak_flag]
+      output:
+        grain_change: false
+        columns:
+          - name: date_key
+            type: int

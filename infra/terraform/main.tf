@@ -177,6 +177,140 @@ module "catalog" {
         { name = "amount_eur", type = "decimal(14,2)", nullable = false, comment = "Regular-run amount plus any retro-pay correction booked to the same employee/pay_period/lohnart_code." },
       ]
     }
+    "processed/dim_cost_center" = {
+      layer       = "processed"
+      dataset     = "dim_cost_center"
+      description = "Dimensions containing attributes related to the company's cost centers."
+      partition_keys = [
+        { name = "snapshot_date", type = "date", comment = "The date in which the snapshot of the cost center reference is generated." },
+      ]
+      columns = [
+        { name = "cost_center_code", type = "string", nullable = false, comment = "Natural key for the cost center." },
+        { name = "cost_center_name", type = "string", nullable = false, comment = "Human-readable cost center name." },
+        { name = "department_name", type = "string", nullable = false, comment = "Department this cost center rolls up to." },
+        { name = "cost_center_type", type = "string", nullable = false, comment = "Classification of the cost center (e.g. operational, administrative)." },
+        { name = "default_location_code", type = "string", nullable = false, comment = "Foreign key to location_reference.location_code - default site associated with this cost center." },
+        { name = "accident_insurance_rate_pct", type = "decimal(5,2)", nullable = false, comment = "Risk classification used to determine the accident insurance rate." },
+        { name = "accident_risk_class", type = "string", nullable = false, comment = "Statutory accident insurance (Berufsgenossenschaft) contribution rate for this cost center's risk class." },
+        { name = "gl_cost_center_segment", type = "string", nullable = false, comment = "General ledger account segment used to post costs for this cost center." },
+        { name = "planned_headcount_fte", type = "int", nullable = false, comment = "Budgeted/planned FTE headcount for this cost center." },
+        { name = "is_active", type = "boolean", nullable = false, comment = "Whether the cost center is currently active." },
+        { name = "valid_from", type = "date", nullable = false, comment = "Start of this record's validity period." },
+        { name = "valid_to", type = "date", nullable = false, comment = "End of this record's validity period. Null indicates the record is currently active." },
+        { name = "cost_center_key", type = "string", nullable = false, comment = "MD5 hash of the cost_center_code and valid_from dimensions." },
+      ]
+    }
+    "processed/dim_employee" = {
+      layer       = "processed"
+      dataset     = "dim_employee"
+      description = "Contains key non-personal identifiable data dimensions for company employees."
+      partition_keys = [
+        { name = "snapshot_date", type = "date", comment = "Date this record reflects (used for SCD2 history construction downstream)." },
+      ]
+      columns = [
+        { name = "employee_id", type = "string", nullable = false, comment = "Natural key for the employee." },
+        { name = "birth_year", type = "int", nullable = false, comment = "Year of the employee's date of birth." },
+        { name = "work_location_code", type = "string", nullable = false, comment = "Foreign key to location_reference.location_code — employee's work site." },
+        { name = "work_location_name", type = "string", nullable = false, comment = "Denormalized work site name." },
+        { name = "department", type = "string", nullable = false, comment = "Department name." },
+        { name = "cost_center_code", type = "string", nullable = false, comment = "Foreign key to cost_center_reference.cost_center_code — employee's current cost center." },
+        { name = "role", type = "string", nullable = false, comment = "Job title/role." },
+        { name = "pay_type", type = "string", nullable = false, comment = "Salaried vs. hourly pay basis — determines whether annual_gross_eur or hourly_rate_eur is populated." },
+        { name = "employment_type", type = "string", nullable = false, comment = "Employment type (e.g. full-time, part-time, minijob)." },
+        { name = "contracted_hours_per_month", type = "decimal(6,2)", nullable = false, comment = "Contracted working hours per month." },
+        { name = "annual_gross_eur", type = "decimal(10,2)", nullable = true, comment = "Annual gross salary for salaried employees. Null for hourly-paid employees (see hourly_rate_eur)." },
+        { name = "hourly_rate_eur", type = "decimal(5,2)", nullable = true, comment = "Hourly rate for hourly-paid employees. Null for salaried employees (see annual_gross_eur)." },
+        { name = "steuerklasse", type = "string", nullable = true, comment = "German income tax bracket (Steuerklasse I–VI)." },
+        { name = "num_children", type = "int", nullable = false, comment = "Number of children, relevant for PV childless surcharge and Steuerklasse." },
+        { name = "childless_surcharge_applies", type = "boolean", nullable = false, comment = "Whether the childless surcharge on long-term care insurance (PV) applies to this employee." },
+        { name = "church_tax_applies", type = "boolean", nullable = false, comment = "Whether church tax is withheld for this employee." },
+        { name = "health_insurance_type", type = "string", nullable = false, comment = "Statutory (GKV) or private (PKV) health insurance." },
+        { name = "health_insurance_fund", type = "string", nullable = true, comment = "Name of the statutory health insurance fund (Krankenkasse). Expected only for GKV members; null for PKV." },
+        { name = "manager_id", type = "string", nullable = true, comment = "Foreign key to employee_master.employee_id — employee's manager. Null for top-of-org-chart roles." },
+        { name = "hire_date", type = "date", nullable = false, comment = "Employee hire date." },
+        { name = "termination_date", type = "date", nullable = true, comment = "Employment termination date. Null for currently active employees." },
+        { name = "job_level", type = "string", nullable = true, comment = "Job/seniority level." },
+        { name = "is_version_start", type = "boolean", nullable = false, comment = "Indicates whether the data point contains a change in the employee's master record." },
+        { name = "valid_from", type = "date", nullable = false, comment = "Snapshot date on which this version of the employee's record was first observed. The underlying change may have taken effect earlier, between the previous snapshot and this one." },
+        { name = "valid_to", type = "date", nullable = true, comment = "Snapshot date on which the next version was first observed. Null for the current version." },
+        { name = "employee_key", type = "string", nullable = false, comment = "Hashed ID of the concatenation of the employee_id and valid_from fields." },
+        { name = "is_current", type = "boolean", nullable = false, comment = "Boolean flag indicating whether the employee record is active as of the snapshot_date." },
+      ]
+    }
+    "processed/dim_location" = {
+      layer       = "processed"
+      dataset     = "dim_location"
+      description = "Dimensions containing key attributes about the company work sites."
+      partition_keys = [
+        { name = "snapshot_date", type = "date", comment = "The date in which the snapshot of the location reference is generated." },
+      ]
+      columns = [
+        { name = "location_code", type = "string", nullable = false, comment = "Natural key for the location" },
+        { name = "location_name", type = "string", nullable = false, comment = "Location site name" },
+        { name = "site_type", type = "string", nullable = false, comment = "Type of site (e.g. HQ, fulfillment center)." },
+        { name = "street_address", type = "string", nullable = false, comment = "Site street address" },
+        { name = "postal_code", type = "string", nullable = false, comment = "Site postal code" },
+        { name = "city", type = "string", nullable = false, comment = "Site city." },
+        { name = "bundesland", type = "string", nullable = false, comment = "German federal state (e.g. Berlin, Sachsen)." },
+        { name = "bundesland_code", type = "string", nullable = false, comment = "Two-letter code for the federal state." },
+        { name = "country", type = "string", nullable = false, comment = "Site country." },
+        { name = "country_code", type = "string", nullable = false, comment = "ISO country code." },
+        { name = "timezone", type = "string", nullable = false, comment = "Site timezone." },
+        { name = "opened_date", type = "date", nullable = false, comment = "Date the site began operations." },
+        { name = "church_tax_rate_pct", type = "decimal(5,2)", nullable = false, comment = "Church tax rate applicable in this state (varies by Bundesland, typically 8-9%)." },
+        { name = "pv_regional_variant", type = "string", nullable = false, comment = "Regional long-term care insurance (PV) contribution split variant — Saxony differs from the rest of Germany." },
+        { name = "rv_av_ceiling_region_pre_2025", type = "string", nullable = false, comment = "Pre-2025 East/West German contribution ceiling region flag, retained for historical reference following ceiling unification." },
+        { name = "is_active", type = "boolean", nullable = false, comment = "Whether the site is currently active/operational." },
+        { name = "valid_from", type = "date", nullable = false, comment = "Start of this record's validity period." },
+        { name = "valid_to", type = "date", nullable = false, comment = "End of this record's validity period. Null indicates the record is currently active." },
+        { name = "location_key", type = "string", nullable = false, comment = "MD5 hash of the location_code and valid_from dimensions." },
+      ]
+    }
+    "processed/dim_pay_component" = {
+      layer       = "processed"
+      dataset     = "dim_pay_component"
+      description = "Dimensions containing attributes related to the company's wage-type catalog."
+      partition_keys = [
+        { name = "valid_from", type = "date", comment = "Start of this record's validity period." },
+      ]
+      columns = [
+        { name = "reference_version", type = "string", nullable = false, comment = "Version identifier for this reference data snapshot." },
+        { name = "valid_to", type = "date", nullable = false, comment = "End of this record's validity period. Null indicates the record is currently active." },
+        { name = "lohnart_code", type = "string", nullable = false, comment = "Natural key — wage type code." },
+        { name = "name_de", type = "string", nullable = false, comment = "Component name in German" },
+        { name = "name_en", type = "string", nullable = false, comment = "Component name in English" },
+        { name = "category", type = "string", nullable = false, comment = "Component category (e.g. earnings, statutory deduction, tax)." },
+        { name = "bearer", type = "string", nullable = false, comment = "Whether this component is borne by employer, employee, or both." },
+        { name = "gl_account", type = "string", nullable = false, comment = "General ledger account this component posts to." },
+        { name = "applies_to", type = "string", nullable = false, comment = "Population this component applies to (e.g. all employees, GKV only)." },
+        { name = "is_active", type = "boolean", nullable = false, comment = "Whether this pay component is currently active/in use." },
+        { name = "employee_rate_pct", type = "decimal(5,2)", nullable = true, comment = "Employee-borne contribution rate, where the employee bears any portion of this component." },
+        { name = "employer_rate_pct", type = "decimal(5,2)", nullable = true, comment = "Employer-borne contribution rate, where the employee bears any portion of this component." },
+        { name = "ceiling_basis", type = "string", nullable = true, comment = "Basis the contribution ceiling is calculated against, where a ceiling applies. Null for components with no ceiling." },
+        { name = "ceiling_monthly_eur", type = "decimal(10,2)", nullable = true, comment = "Monthly contribution ceiling in EUR, where applicable. Null for components with no ceiling." },
+        { name = "employer_amount_cap_eur", type = "decimal(10,2)", nullable = true, comment = "Cap on the employer-borne amount, where applicable." },
+        { name = "rate_on_lohnsteuer_pct", type = "decimal(5,2)", nullable = true, comment = "Rate applied on top of income tax, where the component is calculated this way (e.g. church tax, solidarity surcharge). Null otherwise." },
+        { name = "pv_childless_surcharge_pct", type = "decimal(5,2)", nullable = true, comment = "Long-term care insurance childless surcharge rate, where relevant. Null for non-PV components." },
+        { name = "pv_child_reduction_pct", type = "decimal(5,2)", nullable = true, comment = "Long-term care insurance rate reduction applicable per child, where relevant. Null for non-PV components." },
+        { name = "employer_rate_asymmetric", type = "boolean", nullable = false, comment = "Whether the employer rate diverges from a simple half-split of the employee rate (true for long-term care insurance)." },
+        { name = "rate_note", type = "string", nullable = true, comment = "Free-text note on rate calculation nuances." },
+        { name = "pay_component_key", type = "string", nullable = false, comment = "MD5 hash of the lohnart_code and valid_from dimensions." },
+        { name = "is_ceiling_capped", type = "boolean", nullable = false, comment = "Flag determining whether the wage type has a monthly contribution ceiling defined." },
+      ]
+    }
+    "processed/dim_pay_run" = {
+      layer       = "processed"
+      dataset     = "dim_pay_run"
+      description = "Dimensions containing attributes related to individual payroll runs."
+      partition_keys = [
+        { name = "pay_date", type = "date", comment = "Date payment was issued." },
+      ]
+      columns = [
+        { name = "pay_run_id", type = "string", nullable = false, comment = "Identifier for the payroll run that produced this line." },
+        { name = "run_type", type = "string", nullable = false, comment = "Type of payroll run (e.g. regular, off-cycle, correction, retro)." },
+        { name = "pay_run_key", type = "string", nullable = false, comment = "Hashed primary key of the pay_run_id column." },
+      ]
+    }
   }
   # <<< AMEND:TABLES
   # END Hive tables
@@ -208,6 +342,88 @@ module "glue" {
         OUTPUT_TABLE                         = "${module.catalog.table_names["preprocessed/cost_center_reference"]}"
         PROCESSING_TYPE                      = "backfill"
         START_DATE                           = "2024-07-31"
+      }
+    }
+    dim_cost_center = {
+      glue = {
+        number_of_workers = 5
+        worker_type       = "G.1X"
+      }
+      arguments = {
+        COST_CENTER_REFERENCE_INPUT_PATH = "s3://${module.s3.bucket_names["preprocessed"]}/cost_center_reference/"
+        END_DATE                         = "2026-06-30"
+        OUTPUT_PATH                      = "s3://${module.s3.bucket_names["processed"]}/dim_cost_center/"
+        OUTPUT_TABLE                     = "${module.catalog.table_names["processed/dim_cost_center"]}"
+        PROCESSING_TYPE                  = "backfill"
+        START_DATE                       = "2024-07-31"
+      }
+    }
+    dim_date = {
+      glue = {
+        number_of_workers = 2
+        worker_type       = "G.1X"
+      }
+      arguments = {
+        DATES_INPUT_PATH = "s3://${module.s3.bucket_names["raw"]}/dates/"
+        END_DATE         = "2050-12-31"
+        OUTPUT_PATH      = "s3://${module.s3.bucket_names["preprocessed"]}/dates/"
+        PROCESSING_TYPE  = "backfill"
+        START_DATE       = "2000-01-01"
+      }
+    }
+    dim_employee = {
+      glue = {
+        number_of_workers = 5
+        worker_type       = "G.1X"
+      }
+      arguments = {
+        EMPLOYEE_MASTER_INPUT_PATH = "s3://${module.s3.bucket_names["preprocessed"]}/employee_master/"
+        END_DATE                   = "2026-06-30"
+        OUTPUT_PATH                = "s3://${module.s3.bucket_names["processed"]}/dim_employee/"
+        OUTPUT_TABLE               = "${module.catalog.table_names["processed/dim_employee"]}"
+        PROCESSING_TYPE            = "backfill"
+        START_DATE                 = "2024-07-31"
+      }
+    }
+    dim_location = {
+      glue = {
+        number_of_workers = 2
+        worker_type       = "G.1X"
+      }
+      arguments = {
+        LOCATION_REFERENCE_INPUT_PATH = "s3://${module.s3.bucket_names["preprocessed"]}/location_reference/"
+        LOOKBACK_DAYS                 = "1"
+        OUTPUT_PATH                   = "s3://${module.s3.bucket_names["processed"]}/dim_location/"
+        OUTPUT_TABLE                  = "${module.catalog.table_names["processed/dim_location"]}"
+        PROCESSING_TYPE               = "lookback"
+      }
+    }
+    dim_pay_component = {
+      glue = {
+        number_of_workers = 5
+        worker_type       = "G.1X"
+      }
+      arguments = {
+        END_DATE                           = "2026-06-30"
+        OUTPUT_PATH                        = "s3://${module.s3.bucket_names["processed"]}/dim_pay_component/"
+        OUTPUT_TABLE                       = "${module.catalog.table_names["processed/dim_pay_component"]}"
+        PAY_COMPONENT_REFERENCE_INPUT_PATH = "s3://${module.s3.bucket_names["preprocessed"]}/pay_component_reference/"
+        PROCESSING_TYPE                    = "backfill"
+        START_DATE                         = "2024-07-31"
+      }
+    }
+    dim_pay_run = {
+      glue = {
+        number_of_workers = 2
+        worker_type       = "G.1X"
+      }
+      arguments = {
+        END_DATE                    = "2026-06-30"
+        OUTPUT_PATH                 = "s3://${module.s3.bucket_names["processed"]}/dim_pay_run/"
+        OUTPUT_TABLE                = "${module.catalog.table_names["processed/dim_pay_run"]}"
+        PAYROLL_REGISTER_INPUT_PATH = "s3://${module.s3.bucket_names["preprocessed"]}/payroll_register/"
+        PROCESSING_TYPE             = "backfill"
+        START_DATE                  = "2024-07-31"
       }
     }
     employee_master = {
@@ -269,7 +485,13 @@ module "glue" {
 
   scheduled_triggers = {}
 
-  conditional_triggers = {}
+  conditional_triggers = {
+    dim_cost_center   = "cost_center_reference"
+    dim_employee      = "employee_master"
+    dim_location      = "location_reference"
+    dim_pay_component = "pay_component_reference"
+    dim_pay_run       = "payroll_register"
+  }
   # <<< AMEND:JOBS
   # END ETL jobs and triggers
   # ---------------------------------------------------------------------------

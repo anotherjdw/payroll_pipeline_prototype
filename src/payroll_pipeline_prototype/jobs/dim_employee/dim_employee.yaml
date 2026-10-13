@@ -1,0 +1,70 @@
+# Job spec for the dim_employee ETL job. Generation-time input; never deployed.
+# Fill in every value shaped like <...>. Unknown fields and leftover <...> values fail validation.
+# To delete this job, delete src/<package>/jobs/dim_employee/ and its tests:
+# tests/unit/dim_employee/, tests/integration/test_dim_employee_integration.py,
+# tests/end_to_end/test_dim_employee_e2e.py and tests/fixtures/dim_employee/.
+job:
+  name: dim_employee
+  description: Contains key non-personal identifiable data dimensions for company employees.
+  glue:
+    worker_type: G.1X
+    number_of_workers: 5
+  processing:
+    type: backfill        # lookback | backfill
+    # lookback_days: 1      # lookback only: complete days ending yesterday; 0 processes the current date only
+    start_date: 2024-07-31   # YYYY-MM-DD; set both dates when type is backfill, neither for lookback
+    end_date: 2026-06-30     # backfill processes every day from start_date to end_date
+    # schedule: cron(0 6 * * ? *)   # optional; AWS cron, UTC; only for a job with no upstream job
+  sources:
+    # contract: <contract name, e.g. raw_orders for contracts/raw_orders_data_contract.yaml>
+    - job: employee_master   # instead of contract, to read another job's output; create that job first
+      alias: employee_master
+      allow_empty: false  # true lets this source read no rows without failing the run
+  sink:
+    contract: dim_employee   # the output contract: contracts/dim_employee_data_contract.yaml
+    write_mode: overwrite     # the only mode: replaces the partitions present in the output
+    partition_key: snapshot_date
+  transformations:
+    - name: add birth year
+      description: >
+        Extract the year from the date_of_birth, and drop the date_of_birth column
+      # inputs: the DataFrames this transformation takes, in order; each becomes a parameter.
+      # An input is a source alias, or the name of another transformation to take its output.
+      # Names are written as `name:` is: lower case, spaces and hyphens become underscores.
+      inputs: [employee_master]
+      # depends_on: every transformation named in inputs. transform() calls each of them before
+      # this one, so their output exists when this one is called. Leave out source aliases:
+      # read() loads every source before any transformation is called.
+      # depends_on: [<transformation name>]
+      # output: the result has its inputs' columns, minus removes_columns, plus columns; the
+      # description is not read for this. To rename a column, list its old name under
+      # removes_columns and its new name, with its type, under columns.
+      output:
+        grain_change: false
+        removes_columns: [date_of_birth]
+        columns:            # columns this transformation adds; delete the block if none
+          - name: birth_year
+            type: int
+    - name: drop pii columns
+      description: Removes the following columns containing personal data - first_name, last_name, iban, nationality, sozialversicherungsnummer, street_address, postal_code, marital_status, steuer_id, city, religious_affiliation, extract_timestamp.
+      inputs: [add birth year]
+      depends_on: [add birth year]
+      output:
+        grain_change: false
+        removes_columns: [first_name, last_name, iban, nationality, sozialversicherungsnummer, street_address, postal_code, marital_status, steuer_id, city, religious_affiliation, extract_timestamp]
+    - name: adjust first version valid from
+      description: For each employee's earliest record, sets the valid_from to the earlier of its valid_from date or the hire_date, so periods before the first snapshot still match a version.
+      inputs: [drop pii columns]
+      depends_on: [drop pii columns]
+      output:
+        grain_change: false
+    - name: rename employee version id
+      description: rename the employee_version_id column to employee_key
+      inputs: [adjust first version valid from]
+      depends_on: [adjust first version valid from]
+      output:
+        grain_change: false
+        removes_columns: [employee_version_id]
+        columns:
+          - name: employee_key
+            type: string
