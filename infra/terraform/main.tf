@@ -365,7 +365,7 @@ module "glue" {
       }
       arguments = {
         DATES_INPUT_PATH = "s3://${module.s3.bucket_names["raw"]}/dates/"
-        END_DATE         = "2050-12-31"
+        END_DATE         = "2026-06-30"
         OUTPUT_PATH      = "s3://${module.s3.bucket_names["preprocessed"]}/dates/"
         PROCESSING_TYPE  = "backfill"
         START_DATE       = "2000-01-01"
@@ -391,11 +391,12 @@ module "glue" {
         worker_type       = "G.1X"
       }
       arguments = {
+        END_DATE                      = "2026-01-01"
         LOCATION_REFERENCE_INPUT_PATH = "s3://${module.s3.bucket_names["preprocessed"]}/location_reference/"
-        LOOKBACK_DAYS                 = "1"
         OUTPUT_PATH                   = "s3://${module.s3.bucket_names["processed"]}/dim_location/"
         OUTPUT_TABLE                  = "${module.catalog.table_names["processed/dim_location"]}"
-        PROCESSING_TYPE               = "lookback"
+        PROCESSING_TYPE               = "backfill"
+        START_DATE                    = "2026-01-01"
       }
     }
     dim_pay_component = {
