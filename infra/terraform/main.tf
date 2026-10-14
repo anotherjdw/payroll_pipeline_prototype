@@ -391,12 +391,12 @@ module "glue" {
         worker_type       = "G.1X"
       }
       arguments = {
-        END_DATE                      = "2026-01-01"
+        END_DATE                      = "2026-06-30"
         LOCATION_REFERENCE_INPUT_PATH = "s3://${module.s3.bucket_names["preprocessed"]}/location_reference/"
         OUTPUT_PATH                   = "s3://${module.s3.bucket_names["processed"]}/dim_location/"
         OUTPUT_TABLE                  = "${module.catalog.table_names["processed/dim_location"]}"
         PROCESSING_TYPE               = "backfill"
-        START_DATE                    = "2026-01-01"
+        START_DATE                    = "2024-07-30"
       }
     }
     dim_pay_component = {
