@@ -40,7 +40,7 @@ class RunRecord:
 
     job_name: str
     started_at: str
-    processing_dates: list[str]
+    processing_dates: dict[str, list[str]]
     status: str = "RUNNING"
     phase: str | None = None
     glue_job_name: str | None = None
@@ -73,7 +73,9 @@ def phase(record: RunRecord, name: str) -> Iterator[None]:
 
 
 @contextmanager
-def job_run(job_name: str, args: Namespace, processing_dates: list[str]) -> Iterator[RunRecord]:
+def job_run(
+    job_name: str, args: Namespace, processing_dates: dict[str, list[str]]
+) -> Iterator[RunRecord]:
     """Wrap one run of a job so that exactly one run record is emitted.
 
     The job parses its arguments and resolves its processing dates before it opens
@@ -90,7 +92,8 @@ def job_run(job_name: str, args: Namespace, processing_dates: list[str]) -> Iter
             arrives separately as `--JOB_NAME`; both are recorded.
         args: The job's parsed arguments; their `JOB_NAME`, `JOB_RUN_ID` and
             `environment` are recorded.
-        processing_dates: The dates the run processes, as YYYY-MM-DD strings.
+        processing_dates: The dates the run reads for each partitioned source, keyed by
+            its alias, as YYYY-MM-DD strings.
 
     Yields:
         The mutable `RunRecord` for this run.

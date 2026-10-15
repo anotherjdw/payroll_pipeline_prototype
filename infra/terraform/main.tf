@@ -336,12 +336,12 @@ module "glue" {
         worker_type       = "G.1X"
       }
       arguments = {
+        COST_CENTER_REFERENCE_RAW_END_DATE   = "2026-06-30"
         COST_CENTER_REFERENCE_RAW_INPUT_PATH = "s3://${module.s3.bucket_names["raw"]}/cost_center_reference/"
-        END_DATE                             = "2026-06-30"
+        COST_CENTER_REFERENCE_RAW_START_DATE = "2024-07-31"
         OUTPUT_PATH                          = "s3://${module.s3.bucket_names["preprocessed"]}/cost_center_reference/"
         OUTPUT_TABLE                         = "${module.catalog.table_names["preprocessed/cost_center_reference"]}"
         PROCESSING_TYPE                      = "backfill"
-        START_DATE                           = "2024-07-31"
       }
     }
     dim_cost_center = {
@@ -350,12 +350,12 @@ module "glue" {
         worker_type       = "G.1X"
       }
       arguments = {
+        COST_CENTER_REFERENCE_END_DATE   = "2026-06-30"
         COST_CENTER_REFERENCE_INPUT_PATH = "s3://${module.s3.bucket_names["preprocessed"]}/cost_center_reference/"
-        END_DATE                         = "2026-06-30"
+        COST_CENTER_REFERENCE_START_DATE = "2024-07-31"
         OUTPUT_PATH                      = "s3://${module.s3.bucket_names["processed"]}/dim_cost_center/"
         OUTPUT_TABLE                     = "${module.catalog.table_names["processed/dim_cost_center"]}"
         PROCESSING_TYPE                  = "backfill"
-        START_DATE                       = "2024-07-31"
       }
     }
     dim_date = {
@@ -365,10 +365,8 @@ module "glue" {
       }
       arguments = {
         DATES_INPUT_PATH = "s3://${module.s3.bucket_names["raw"]}/dates/"
-        END_DATE         = "2026-06-30"
         OUTPUT_PATH      = "s3://${module.s3.bucket_names["preprocessed"]}/dates/"
         PROCESSING_TYPE  = "backfill"
-        START_DATE       = "2000-01-01"
       }
     }
     dim_employee = {
@@ -377,12 +375,12 @@ module "glue" {
         worker_type       = "G.1X"
       }
       arguments = {
+        EMPLOYEE_MASTER_END_DATE   = "2026-06-30"
         EMPLOYEE_MASTER_INPUT_PATH = "s3://${module.s3.bucket_names["preprocessed"]}/employee_master/"
-        END_DATE                   = "2026-06-30"
+        EMPLOYEE_MASTER_START_DATE = "2024-07-31"
         OUTPUT_PATH                = "s3://${module.s3.bucket_names["processed"]}/dim_employee/"
         OUTPUT_TABLE               = "${module.catalog.table_names["processed/dim_employee"]}"
         PROCESSING_TYPE            = "backfill"
-        START_DATE                 = "2024-07-31"
       }
     }
     dim_location = {
@@ -391,12 +389,12 @@ module "glue" {
         worker_type       = "G.1X"
       }
       arguments = {
-        END_DATE                      = "2026-06-30"
+        LOCATION_REFERENCE_END_DATE   = "2026-06-30"
         LOCATION_REFERENCE_INPUT_PATH = "s3://${module.s3.bucket_names["preprocessed"]}/location_reference/"
+        LOCATION_REFERENCE_START_DATE = "2024-07-30"
         OUTPUT_PATH                   = "s3://${module.s3.bucket_names["processed"]}/dim_location/"
         OUTPUT_TABLE                  = "${module.catalog.table_names["processed/dim_location"]}"
         PROCESSING_TYPE               = "backfill"
-        START_DATE                    = "2024-07-30"
       }
     }
     dim_pay_component = {
@@ -405,12 +403,12 @@ module "glue" {
         worker_type       = "G.1X"
       }
       arguments = {
-        END_DATE                           = "2026-06-30"
         OUTPUT_PATH                        = "s3://${module.s3.bucket_names["processed"]}/dim_pay_component/"
         OUTPUT_TABLE                       = "${module.catalog.table_names["processed/dim_pay_component"]}"
+        PAY_COMPONENT_REFERENCE_END_DATE   = "2026-06-30"
         PAY_COMPONENT_REFERENCE_INPUT_PATH = "s3://${module.s3.bucket_names["preprocessed"]}/pay_component_reference/"
+        PAY_COMPONENT_REFERENCE_START_DATE = "2024-07-31"
         PROCESSING_TYPE                    = "backfill"
-        START_DATE                         = "2024-07-31"
       }
     }
     dim_pay_run = {
@@ -419,12 +417,12 @@ module "glue" {
         worker_type       = "G.1X"
       }
       arguments = {
-        END_DATE                    = "2026-06-30"
         OUTPUT_PATH                 = "s3://${module.s3.bucket_names["processed"]}/dim_pay_run/"
         OUTPUT_TABLE                = "${module.catalog.table_names["processed/dim_pay_run"]}"
+        PAYROLL_REGISTER_END_DATE   = "2026-06-30"
         PAYROLL_REGISTER_INPUT_PATH = "s3://${module.s3.bucket_names["preprocessed"]}/payroll_register/"
+        PAYROLL_REGISTER_START_DATE = "2024-07-31"
         PROCESSING_TYPE             = "backfill"
-        START_DATE                  = "2024-07-31"
       }
     }
     employee_master = {
@@ -433,12 +431,12 @@ module "glue" {
         worker_type       = "G.1X"
       }
       arguments = {
+        EMPLOYEE_MASTER_RAW_END_DATE   = "2026-06-30"
         EMPLOYEE_MASTER_RAW_INPUT_PATH = "s3://${module.s3.bucket_names["raw"]}/employee_master/"
-        END_DATE                       = "2026-06-30"
+        EMPLOYEE_MASTER_RAW_START_DATE = "2024-07-31"
         OUTPUT_PATH                    = "s3://${module.s3.bucket_names["preprocessed"]}/employee_master/"
         OUTPUT_TABLE                   = "${module.catalog.table_names["preprocessed/employee_master"]}"
         PROCESSING_TYPE                = "backfill"
-        START_DATE                     = "2024-07-31"
       }
     }
     location_reference = {
@@ -447,12 +445,12 @@ module "glue" {
         worker_type       = "G.1X"
       }
       arguments = {
-        END_DATE                          = "2026-06-30"
+        LOCATION_REFERENCE_RAW_END_DATE   = "2026-06-30"
         LOCATION_REFERENCE_RAW_INPUT_PATH = "s3://${module.s3.bucket_names["raw"]}/location_reference/"
+        LOCATION_REFERENCE_RAW_START_DATE = "2024-07-31"
         OUTPUT_PATH                       = "s3://${module.s3.bucket_names["preprocessed"]}/location_reference/"
         OUTPUT_TABLE                      = "${module.catalog.table_names["preprocessed/location_reference"]}"
         PROCESSING_TYPE                   = "backfill"
-        START_DATE                        = "2024-07-31"
       }
     }
     pay_component_reference = {
@@ -461,11 +459,11 @@ module "glue" {
         worker_type       = "G.1X"
       }
       arguments = {
-        END_DATE                               = "2026-01-01"
         OUTPUT_PATH                            = "s3://${module.s3.bucket_names["preprocessed"]}/pay_component_reference/"
+        PAY_COMPONENT_REFERENCE_RAW_END_DATE   = "2026-01-01"
         PAY_COMPONENT_REFERENCE_RAW_INPUT_PATH = "s3://${module.s3.bucket_names["raw"]}/pay_component_reference/"
+        PAY_COMPONENT_REFERENCE_RAW_START_DATE = "2024-07-01"
         PROCESSING_TYPE                        = "backfill"
-        START_DATE                             = "2024-07-01"
       }
     }
     payroll_register = {
@@ -474,12 +472,12 @@ module "glue" {
         worker_type       = "G.1X"
       }
       arguments = {
-        END_DATE                        = "2026-06-30"
         OUTPUT_PATH                     = "s3://${module.s3.bucket_names["preprocessed"]}/payroll_register/"
         OUTPUT_TABLE                    = "${module.catalog.table_names["preprocessed/payroll_register"]}"
+        PAYROLL_REGISTER_RAW_END_DATE   = "2026-06-30"
         PAYROLL_REGISTER_RAW_INPUT_PATH = "s3://${module.s3.bucket_names["raw"]}/payroll/"
+        PAYROLL_REGISTER_RAW_START_DATE = "2024-07-30"
         PROCESSING_TYPE                 = "backfill"
-        START_DATE                      = "2024-07-30"
       }
     }
   }

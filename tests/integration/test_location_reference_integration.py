@@ -6,6 +6,7 @@ the job's output, the reviewed expected rows of its last transformation.
 """
 
 from collections.abc import Iterator
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -89,6 +90,19 @@ def test_read(spark: SparkSession, test_dir: Path) -> None:
     for alias, source in SOURCES.items():
         assert sources[alias].count() == len(source.rows), alias
         assert column_types(sources[alias].schema) == column_types(source.schema), alias
+
+
+def test_read_no_data_raises(spark: SparkSession, test_dir: Path) -> None:
+    """read() fails for dates with no input rows, since a source may not be empty."""
+    assert inputs.INPUTS_FILLED, inputs_message("location_reference")
+    args = job.parse_arguments(write_sources(spark, SOURCES, test_dir))
+    # Each partitioned source reads the day before its first input row.
+    days_before = {
+        alias: [(date.fromisoformat(dates[0]) - timedelta(days=1)).isoformat()]
+        for alias, dates in processing_dates(SOURCES).items()
+    }
+    with pytest.raises(ValueError, match="read no rows"):
+        job.read(args, days_before)
 
 
 def test_transform(spark: SparkSession, test_dir: Path) -> None:

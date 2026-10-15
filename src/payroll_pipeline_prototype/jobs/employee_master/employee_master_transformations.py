@@ -224,17 +224,17 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--OUTPUT_PATH", type=str)
     parser.add_argument("--OUTPUT_TABLE", type=str)
     parser.add_argument("--PROCESSING_TYPE", type=str)
-    parser.add_argument("--LOOKBACK_DAYS", type=int)
-    parser.add_argument("--START_DATE", type=str)
-    parser.add_argument("--END_DATE", type=str)
+    parser.add_argument("--EMPLOYEE_MASTER_RAW_LOOKBACK_DAYS", type=int)
+    parser.add_argument("--EMPLOYEE_MASTER_RAW_START_DATE", type=str)
+    parser.add_argument("--EMPLOYEE_MASTER_RAW_END_DATE", type=str)
     parser.add_argument("--JOB_NAME", type=str)
     parser.add_argument("--JOB_RUN_ID", type=str)
     parser.add_argument("--environment", type=str)
     return parser.parse_known_args(argv)[0]
 
 
-def read(args: argparse.Namespace, processing_dates: list[str]) -> dict[str, DataFrame]:
-    """Read every source for the processing dates; an empty source fails unless allowed."""
+def read(args: argparse.Namespace, processing_dates: dict[str, list[str]]) -> dict[str, DataFrame]:
+    """Read every source, each for its own dates; an empty source fails unless allowed."""
     spark = spark_session()
     sources = {
         "employee_master_raw": create_pyspark_dataframe(
@@ -242,13 +242,14 @@ def read(args: argparse.Namespace, processing_dates: list[str]) -> dict[str, Dat
             file_path=args.EMPLOYEE_MASTER_RAW_INPUT_PATH,
             schema=schema_definitions.employee_master_raw_schema,
             file_format="json",
-            date_ranges=processing_dates,
+            date_ranges=processing_dates["employee_master_raw"],
             partition_key="snapshot_date",
         ),
     }
     if sources["employee_master_raw"].isEmpty():
         raise ValueError(
-            f"Source 'employee_master_raw' read no rows for {processing_dates}. "
+            f"Source 'employee_master_raw' read no rows for "
+            f"{processing_dates['employee_master_raw']}. "
             "To allow this, set allow_empty: true on this source in "
             "employee_master.yaml."
         )

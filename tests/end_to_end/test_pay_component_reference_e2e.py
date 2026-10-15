@@ -58,12 +58,13 @@ def test_run_end_to_end(
         *write_sources(spark, SOURCES, test_dir / "sources"),
         "--OUTPUT_PATH",
         output_path,
+        # Each partitioned source reads the days its input rows fall on.
         "--PROCESSING_TYPE",
         "backfill",
-        "--START_DATE",
-        dates[0],
-        "--END_DATE",
-        dates[-1],
+        "--PAY_COMPONENT_REFERENCE_RAW_START_DATE",
+        dates["pay_component_reference_raw"][0],
+        "--PAY_COMPONENT_REFERENCE_RAW_END_DATE",
+        dates["pay_component_reference_raw"][-1],
     ]
     monkeypatch.setattr(sys, "argv", argv)
     job.run()

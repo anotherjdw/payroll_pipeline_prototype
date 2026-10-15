@@ -10,16 +10,17 @@ job:
     worker_type: G.1X
     number_of_workers: 2
   processing:
-    type: backfill        # lookback | backfill
-    # lookback_days: 1      # lookback only: complete days ending yesterday; 0 processes the current date only
-    start_date: 2024-07-31   # YYYY-MM-DD; set both dates when type is backfill, neither for lookback
-    end_date: 2026-06-30     # backfill processes every day from start_date to end_date
+    type: backfill        # lookback | backfill; applies to every source's dates
     # schedule: cron(0 6 * * ? *)   # optional; AWS cron, UTC; only for a job with no upstream job
   sources:
     # contract: <contract name, e.g. raw_orders for contracts/raw_orders_data_contract.yaml>
     - job: payroll_register   # instead of contract, to read another job's output; create that job first
       alias: payroll_register
       allow_empty: false  # true lets this source read no rows without failing the run
+      # The dates this source reads, if it is partitioned by date; an unpartitioned source sets none.
+      # lookback_days: 1    # lookback only, 1 when not set: complete days ending yesterday; 0 processes the current date only
+      start_date: 2024-07-31   # YYYY-MM-DD; set both dates when type is backfill, neither for lookback
+      end_date: 2026-06-30     # backfill processes every day from start_date to end_date
   sink:
     contract: dim_pay_run   # the output contract: contracts/dim_pay_run_data_contract.yaml
     write_mode: overwrite     # the only mode: replaces the partitions present in the output

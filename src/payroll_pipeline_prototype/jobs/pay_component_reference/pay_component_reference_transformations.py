@@ -51,17 +51,17 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--PAY_COMPONENT_REFERENCE_RAW_INPUT_PATH", type=str)
     parser.add_argument("--OUTPUT_PATH", type=str)
     parser.add_argument("--PROCESSING_TYPE", type=str)
-    parser.add_argument("--LOOKBACK_DAYS", type=int)
-    parser.add_argument("--START_DATE", type=str)
-    parser.add_argument("--END_DATE", type=str)
+    parser.add_argument("--PAY_COMPONENT_REFERENCE_RAW_LOOKBACK_DAYS", type=int)
+    parser.add_argument("--PAY_COMPONENT_REFERENCE_RAW_START_DATE", type=str)
+    parser.add_argument("--PAY_COMPONENT_REFERENCE_RAW_END_DATE", type=str)
     parser.add_argument("--JOB_NAME", type=str)
     parser.add_argument("--JOB_RUN_ID", type=str)
     parser.add_argument("--environment", type=str)
     return parser.parse_known_args(argv)[0]
 
 
-def read(args: argparse.Namespace, processing_dates: list[str]) -> dict[str, DataFrame]:
-    """Read every source for the processing dates; an empty source fails unless allowed."""
+def read(args: argparse.Namespace, processing_dates: dict[str, list[str]]) -> dict[str, DataFrame]:
+    """Read every source, each for its own dates; an empty source fails unless allowed."""
     spark = spark_session()
     sources = {
         "pay_component_reference_raw": create_pyspark_dataframe(
@@ -69,7 +69,7 @@ def read(args: argparse.Namespace, processing_dates: list[str]) -> dict[str, Dat
             file_path=args.PAY_COMPONENT_REFERENCE_RAW_INPUT_PATH,
             schema=schema_definitions.pay_component_reference_raw_schema,
             file_format="json",
-            date_ranges=processing_dates,
+            date_ranges=processing_dates["pay_component_reference_raw"],
             partition_key="valid_from",
         ),
     }

@@ -81,12 +81,13 @@ def test_run_end_to_end(
         output_path,
         "--OUTPUT_TABLE",
         output_table,
+        # Each partitioned source reads the days its input rows fall on.
         "--PROCESSING_TYPE",
         "backfill",
-        "--START_DATE",
-        dates[0],
-        "--END_DATE",
-        dates[-1],
+        "--PAYROLL_REGISTER_RAW_START_DATE",
+        dates["payroll_register_raw"][0],
+        "--PAYROLL_REGISTER_RAW_END_DATE",
+        dates["payroll_register_raw"][-1],
     ]
     monkeypatch.setattr(sys, "argv", argv)
     job.run()

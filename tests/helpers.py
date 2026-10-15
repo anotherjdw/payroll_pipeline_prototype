@@ -150,13 +150,13 @@ def fixture_dates(rows: list[Row], partition_key: str) -> list[str]:
     return sorted({row[partition_key].isoformat() for row in rows})
 
 
-def processing_dates(sources: Mapping[str, SourceFixture]) -> list[str]:
-    """List every date the input rows of the partitioned sources fall on: what a run reads."""
-    dates: set[str] = set()
-    for source in sources.values():
-        if source.partition_key is not None:
-            dates.update(fixture_dates(source.rows, source.partition_key))
-    return sorted(dates)
+def processing_dates(sources: Mapping[str, SourceFixture]) -> dict[str, list[str]]:
+    """List, per partitioned source, the dates its input rows fall on: what a run reads."""
+    return {
+        alias: fixture_dates(source.rows, source.partition_key)
+        for alias, source in sources.items()
+        if source.partition_key is not None
+    }
 
 
 def inputs_message(job: str) -> str:

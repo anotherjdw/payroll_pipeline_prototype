@@ -54,10 +54,6 @@ def test_run_end_to_end(
         "--OUTPUT_PATH",
         output_path,
         # No source is partitioned by date, so a run reads every input row, whatever the date.
-        "--PROCESSING_TYPE",
-        "lookback",
-        "--LOOKBACK_DAYS",
-        "0",
     ]
     monkeypatch.setattr(sys, "argv", argv)
     job.run()

@@ -12,14 +12,16 @@ from payroll_pipeline_prototype.utils.python import resolve_processing_dates
 
 
 def run() -> None:
-    """Parse arguments and resolve dates, then read, transform and write once."""
+    """Parse arguments and resolve each source's dates, then read, transform and write once."""
     args = job.parse_arguments()
-    processing_dates = resolve_processing_dates(
-        processing_type=args.PROCESSING_TYPE,
-        lookback_days=args.LOOKBACK_DAYS,
-        start_date=args.START_DATE,
-        end_date=args.END_DATE,
-    )
+    processing_dates: dict[str, list[str]] = {
+        "payroll_register_raw": resolve_processing_dates(
+            processing_type=args.PROCESSING_TYPE,
+            lookback_days=args.PAYROLL_REGISTER_RAW_LOOKBACK_DAYS,
+            start_date=args.PAYROLL_REGISTER_RAW_START_DATE,
+            end_date=args.PAYROLL_REGISTER_RAW_END_DATE,
+        ),
+    }
     with job_run("payroll_register", args, processing_dates) as record:
         with phase(record, "read"):
             sources = job.read(args, processing_dates)

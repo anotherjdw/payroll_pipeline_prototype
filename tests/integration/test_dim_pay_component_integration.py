@@ -57,6 +57,8 @@ NOT_NULL_COLUMNS = [
     "applies_to",
     "is_active",
     "employer_rate_asymmetric",
+    "pay_component_key",
+    "is_ceiling_capped",
 ]
 
 
@@ -88,15 +90,19 @@ def test_read(spark: SparkSession, test_dir: Path) -> None:
 
 
 def test_read_no_data_raises(spark: SparkSession, test_dir: Path) -> None:
-    """read() fails for a date with no input rows, since a source may not be empty."""
+    """read() fails for dates with no input rows, since a source may not be empty."""
     assert inputs.DEDUPLICATE_PAY_COMPONENT_REFERENCE_REVIEWED, review_message(
         "pay_component_reference",
         "DEDUPLICATE_PAY_COMPONENT_REFERENCE",
     )
     args = job.parse_arguments(write_sources(spark, SOURCES, test_dir))
-    day_before = date.fromisoformat(processing_dates(SOURCES)[0]) - timedelta(days=1)
+    # Each partitioned source reads the day before its first input row.
+    days_before = {
+        alias: [(date.fromisoformat(dates[0]) - timedelta(days=1)).isoformat()]
+        for alias, dates in processing_dates(SOURCES).items()
+    }
     with pytest.raises(ValueError, match="read no rows"):
-        job.read(args, [day_before.isoformat()])
+        job.read(args, days_before)
 
 
 def test_transform(spark: SparkSession, test_dir: Path) -> None:
