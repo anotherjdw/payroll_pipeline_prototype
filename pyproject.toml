@@ -44,8 +44,10 @@ select = ["E", "F", "I", "W", "UP", "B", "SIM"]
 # whose transformations don't happen to need all of them.
 "**/*_transformations.py" = ["F401"]
 # Each job's fixture modules import every value type a row may hold, so rows of any type can
-# be written without touching the imports.
-"tests/fixtures/**" = ["F401"]
+# be written without touching the imports. A hash in a row is written
+# md5("<text>".encode("utf-8")).hexdigest(): UP012 would drop the "utf-8", there and in
+# `generate expected-outputs`' own `ruff check --fix`.
+"tests/fixtures/**" = ["F401", "UP012"]
 
 # --- mypy -----------------------------------------------------------------
 [tool.mypy]

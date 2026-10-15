@@ -34,7 +34,7 @@ CREATE_LOCATION_REFERENCE_KEY_ROWS: list[Row] = [
         is_active=True,
         valid_from=date(2024, 7, 1),
         valid_to=date(2026, 6, 30),
-        location_key=md5(b"LOC-BER2024-07-01").hexdigest(),
+        location_key=md5("LOC-BER2024-07-01".encode("utf-8")).hexdigest(),
     ),
     Row(
         snapshot_date=date(2026, 6, 1),
@@ -56,6 +56,6 @@ CREATE_LOCATION_REFERENCE_KEY_ROWS: list[Row] = [
         is_active=True,
         valid_from=date(2024, 7, 1),
         valid_to=date(2026, 6, 30),
-        location_key=md5(b"LOC-LEI2024-07-01").hexdigest(),
+        location_key=md5("LOC-LEI2024-07-01".encode("utf-8")).hexdigest(),
     ),
 ]

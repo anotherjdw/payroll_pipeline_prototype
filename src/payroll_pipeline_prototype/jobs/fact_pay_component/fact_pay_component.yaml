@@ -1,0 +1,133 @@
+# Job spec for the fact_pay_component ETL job. Generation-time input; never deployed.
+# Fill in every value shaped like <...>. Unknown fields and leftover <...> values fail validation.
+# To delete this job, delete src/<package>/jobs/fact_pay_component/ and its tests:
+# tests/unit/fact_pay_component/, tests/integration/test_fact_pay_component_integration.py,
+# tests/end_to_end/test_fact_pay_component_e2e.py and tests/fixtures/fact_pay_component/.
+job:
+  name: fact_pay_component
+  description: Fact table that provides payroll information with the ability to join multiple dimension tables.
+  glue:
+    worker_type: G.1X
+    number_of_workers: 5
+  processing:
+    type: backfill        # lookback | backfill; applies to every source's dates
+    # schedule: cron(0 6 * * ? *)   # optional; AWS cron, UTC; only for a job with no upstream job
+  sources:
+    # contract: <contract name, e.g. raw_orders for contracts/raw_orders_data_contract.yaml>
+    - job: payroll_register   # instead of contract, to read another job's output; create that job first
+      alias: payroll_register
+      allow_empty: false  # true lets this source read no rows without failing the run
+      # The dates this source reads, if it is partitioned by date; an unpartitioned source sets none.
+      # lookback_days: 1    # lookback only, 1 when not set: complete days ending yesterday; 0 processes the current date only
+      start_date: 2024-07-31   # YYYY-MM-DD; set both dates when type is backfill, neither for lookback
+      end_date: 2026-06-30     # backfill processes every day from start_date to end_date
+    - job: dim_employee
+      alias: dim_employee
+      allow_empty: false
+      start_date: 2024-07-31
+      end_date: 2024-06-30
+    - job: dim_cost_center
+      alias: dim_cost_center
+      allow_empty: false
+      start_date: 2024-07-31
+      end_date: 2026-06-30
+    - job: dim_location
+      alias: dim_location
+      allow_empty: false
+      start_date: 2024-07-31
+      end_date: 2026-06-30
+    - job: dim_pay_component
+      alias: dim_pay_component
+      allow_empty: false
+      start_date: 2024-07-31
+      end_date: 2026-06-30
+  sink:
+    contract: fact_pay_component   # the output contract: contracts/fact_pay_component_data_contract.yaml
+    write_mode: overwrite     # the only mode: replaces the partitions present in the output
+    partition_key: period_end_date
+  transformations:
+    - name: add period end date
+      description: Calculates the last day of the calendar month corresponding to the pay_date column. e.g., if the value of pay_date is 2026-05-29, the period end date is 2026-05-31.
+      inputs: [payroll_register]
+      output:
+        grain_change: false
+        columns:
+          - name: period_end_date
+            type: date
+    - name: add date key
+      description: Convert period_end_date into an integer in yyyymmdd format, to enable dim_date to be joined to the output fact table.
+      inputs: [add period end date]
+      depends_on: [add period end date]
+      output:
+        grain_change: false
+        columns:
+          - name: date_key
+            type: int
+    - name: add pay run key
+      description: Creates an md5 hashed column called pay_run_key, which hashes the pay_run_id column.
+      inputs: [add date key]
+      depends_on: [add date key]
+      output:
+        grain_change: false
+        columns:
+          - name: pay_run_key
+            type: string
+    - name: payroll data
+      description: Selects the following columns from the payroll data to be used in the output fact table - period_end_date, date_key, pay_run_key, pay_period, gl_account, amount_eur, quantity, rate, asssessment_base_eur, employee_id, cost_center_code, location_code, lohnart_code.
+      inputs: [add pay run key]
+      depends_on: [add pay run key]
+      output:
+        grain_change: false
+        removes_columns: [pay_run_id, pay_date, run_type, component_name, bearer]
+    - name: select employee data
+      description: Selects the following columns needed to join employee data to payroll data - employee_id, employee_key, valid_to, valid_from.
+      inputs: [dim_employee]
+      output:
+        grain_change: false
+        removes_columns: [snapshot_date, birth_year, work_location_code, work_location_name, department, cost_center_code, role, pay_type, employment_type, contracted_hours_per_month, annual_gross_eur, hourly_rate_eur, steuerklasse, num_children, childless_surcharge_applies, church_tax_applies, health_insurance_type, health_insurance_fund, manager_id, hire_date, termination_date, job_level, is_version_start, is_current]
+    - name: select cost center data
+      description: Selects the following columns needed to join cost center data to payroll data - cost_center_code, cost_center_key, valid_to, valid_from.
+      inputs: [dim_cost_center]
+      output:
+        grain_change: false
+        removes_columns: [snapshot_date, cost_center_name, department_name, cost_center_type, default_location_code, accident_insurance_rate_pct, accident_risk_class, gl_cost_center_segment, planned_headcount_fte, is_active]
+    - name: select location data
+      description: Selects the following columns needed to join location data to payroll data - location_code, location_key, valid_to, valid_from.
+      inputs: [dim_location]
+      output:
+        grain_change: false
+        removes_columns: [snapshot_date, location_name, site_type, street_address, postal_code, city, bundesland, bundesland_code, country, country_code, timezone, opened_date, church_tax_rate_pct, pv_regional_variant, rv_av_ceiling_region_pre_2025, is_active]
+    - name: select pay component data
+      description: Selects the following column needed to join pay component data to payroll data - lohnart_code, pay_component_key, valid_to, valid_from.
+      inputs: [dim_pay_component]
+      output:
+        grain_change: false
+        removes_columns: [reference_version, name_de, name_en, bearer, gl_account, applies_to, is_active, employee_rate_pct, employer_rate_pct, ceiling_basis, ceiling_monthly_eur, employer_amount_cap_eur, rate_on_lohnsteuer_pct, pv_childless_surcharge_pct, pv_child_reduction_pct, employer_rate_asymmetric, rate_note, is_ceiling_capped, category]
+    - name: join employee key to payroll
+      description: Left joins the employee data source to the payroll data source on employee_id, and where the period_end_date is greater than or equal to valid_from column in the employee data, and either valid_to is null or the period_end_date is less than valid_to date.
+      inputs: [payroll data, select employee data]
+      depends_on: [payroll data, select employee data]
+      output:
+        grain_change: false
+        removes_columns: [valid_to, valid_from]
+    - name: join cost center key to payroll
+      description: Left joins the dim_cost_center data source to the payroll data source on cost_center_code, and where the period_end_date is greater than or equal to dim_cost_center.valid_from, and either dim_cost_center.valid_to is null or the period_end_date is less than dim_cost_center.valid_to.
+      inputs: [join employee key to payroll, select cost center data]
+      depends_on: [join employee key to payroll, select cost center data]
+      output:
+        grain_change: false
+        removes_columns: [valid_to, valid_from]
+    - name: join location key to payroll
+      description: Left joins the dim_location data source to the payroll data source on location_code, and where the period_end_date is greater than or equal to dim_location.valid_from, and either dim_location.valid_to is null or the period_end_date is less than dim_location.valid_to.
+      inputs: [join cost center key to payroll, select location data]
+      depends_on: [join cost center key to payroll, select location data]
+      output:
+        grain_change: false
+        removes_columns: [valid_to, valid_from]
+    - name: join pay component key to payroll
+      description: Left joins the dim_pay_component data source to the payroll data source on lohnart_code, and where the period_end_date is greater than or equal to dim_pay_component.valid_from, and either dim_pay_component.valid_to is null or the period_end_date is less than dim_pay_component.valid_to.
+      inputs: [join location key to payroll, select pay component data]
+      depends_on: [join location key to payroll, select pay component data]
+      output:
+        grain_change: false
+        removes_columns: [valid_to, valid_from]

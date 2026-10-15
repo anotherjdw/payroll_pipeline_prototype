@@ -37,12 +37,12 @@ CREATE_PAY_RUN_KEY_ROWS: list[Row] = [
         pay_run_id="2026-01-REG",
         pay_date=date(2026, 1, 30),
         run_type="regular",
-        pay_run_key=md5(b"2026-01-REG").hexdigest(),
+        pay_run_key=md5("2026-01-REG".encode("utf-8")).hexdigest(),
     ),
     Row(
         pay_run_id="2026-02-REG",
         pay_date=date(2026, 2, 27),
         run_type="regular",
-        pay_run_key=md5(b"2026-02-REG").hexdigest(),
+        pay_run_key=md5("2026-02-REG".encode("utf-8")).hexdigest(),
     ),
 ]

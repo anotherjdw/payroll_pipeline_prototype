@@ -311,6 +311,32 @@ module "catalog" {
         { name = "pay_run_key", type = "string", nullable = false, comment = "Hashed primary key of the pay_run_id column." },
       ]
     }
+    "processed/fact_pay_component" = {
+      layer       = "processed"
+      dataset     = "fact_pay_component"
+      description = "Fact table that provides payroll information with the ability to join multiple dimension tables."
+      partition_keys = [
+        { name = "period_end_date", type = "date", comment = "The last day of the calendar month in the given pay period." },
+      ]
+      columns = [
+        { name = "pay_period", type = "string", nullable = false, comment = "Pay period this line applies to (e.g. year-month)." },
+        { name = "employee_id", type = "string", nullable = false, comment = "Foreign key to employee_master.employee_id." },
+        { name = "cost_center_code", type = "string", nullable = false, comment = "Cost center as booked for this specific pay period — not the employee's current cost center. Foreign key to cost_center_reference.cost_center_code." },
+        { name = "location_code", type = "string", nullable = false, comment = "Foreign key to location_reference.location_code — location as of this pay period." },
+        { name = "lohnart_code", type = "string", nullable = false, comment = "Foreign key to pay_component_reference.lohnart_code — wage type code." },
+        { name = "gl_account", type = "string", nullable = false, comment = "General ledger account this line posts to." },
+        { name = "quantity", type = "decimal(12,4)", nullable = true, comment = "Quantity basis for the component (e.g. hours), where applicable. Null for flat-amount components." },
+        { name = "rate", type = "decimal(12,6)", nullable = true, comment = "Rate applied to quantity to derive amount_eur, where applicable. Null for flat-amount components." },
+        { name = "assessment_base_eur", type = "decimal(14,2)", nullable = true, comment = "Base amount this component's contribution/tax was calculated against. Null where not applicable to the component type." },
+        { name = "amount_eur", type = "decimal(14,2)", nullable = false, comment = "Regular-run amount plus any retro-pay correction booked to the same employee/pay_period/lohnart_code." },
+        { name = "date_key", type = "int", nullable = false, comment = "Integer in yyyymmdd format, corresponding to the value of the period_end_date column. Used as the foreign key for the dim_date data source." },
+        { name = "pay_run_key", type = "string", nullable = false, comment = "MD5 hash of the pay_run_id column." },
+        { name = "employee_key", type = "string", nullable = true, comment = "Hashed ID of the concatenation of the employee_id and valid_from fields." },
+        { name = "cost_center_key", type = "string", nullable = false, comment = "MD5 hash of the cost_center_code and valid_from dimensions." },
+        { name = "location_key", type = "string", nullable = false, comment = "MD5 hash of the location_code and valid_from dimensions." },
+        { name = "pay_component_key", type = "string", nullable = false, comment = "MD5 hash of the lohnart_code and valid_from dimensions." },
+      ]
+    }
   }
   # <<< AMEND:TABLES
   # END Hive tables
@@ -437,6 +463,32 @@ module "glue" {
         OUTPUT_PATH                    = "s3://${module.s3.bucket_names["preprocessed"]}/employee_master/"
         OUTPUT_TABLE                   = "${module.catalog.table_names["preprocessed/employee_master"]}"
         PROCESSING_TYPE                = "backfill"
+      }
+    }
+    fact_pay_component = {
+      glue = {
+        number_of_workers = 5
+        worker_type       = "G.1X"
+      }
+      arguments = {
+        DIM_COST_CENTER_END_DATE     = "2026-06-30"
+        DIM_COST_CENTER_INPUT_PATH   = "s3://${module.s3.bucket_names["processed"]}/dim_cost_center/"
+        DIM_COST_CENTER_START_DATE   = "2024-07-31"
+        DIM_EMPLOYEE_END_DATE        = "2024-06-30"
+        DIM_EMPLOYEE_INPUT_PATH      = "s3://${module.s3.bucket_names["processed"]}/dim_employee/"
+        DIM_EMPLOYEE_START_DATE      = "2024-07-31"
+        DIM_LOCATION_END_DATE        = "2026-06-30"
+        DIM_LOCATION_INPUT_PATH      = "s3://${module.s3.bucket_names["processed"]}/dim_location/"
+        DIM_LOCATION_START_DATE      = "2024-07-31"
+        DIM_PAY_COMPONENT_END_DATE   = "2026-06-30"
+        DIM_PAY_COMPONENT_INPUT_PATH = "s3://${module.s3.bucket_names["processed"]}/dim_pay_component/"
+        DIM_PAY_COMPONENT_START_DATE = "2024-07-31"
+        OUTPUT_PATH                  = "s3://${module.s3.bucket_names["processed"]}/fact_pay_component/"
+        OUTPUT_TABLE                 = "${module.catalog.table_names["processed/fact_pay_component"]}"
+        PAYROLL_REGISTER_END_DATE    = "2026-06-30"
+        PAYROLL_REGISTER_INPUT_PATH  = "s3://${module.s3.bucket_names["preprocessed"]}/payroll_register/"
+        PAYROLL_REGISTER_START_DATE  = "2024-07-31"
+        PROCESSING_TYPE              = "backfill"
       }
     }
     location_reference = {
